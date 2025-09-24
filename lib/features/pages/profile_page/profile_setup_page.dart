@@ -1,10 +1,10 @@
+import 'dart:developer';
 import 'package:flutter/material.dart';
 import '../../data/profile/user_profile.dart';
 import '../../utils/profile_setup_data.dart';
+import '../../service/service.dart';
 import '../../widgets/profile_widgets/financial_background_tiles.dart';
-
 import '../dashboard/dashboard_page.dart' as dashboard_page;
-import '../../data/profile/user_profile.dart';
 
 class ProfileSetupPage extends StatefulWidget {
   final void Function(UserProfile profile) onComplete;
@@ -16,11 +16,11 @@ class ProfileSetupPage extends StatefulWidget {
 }
 
 class _ProfileSetupPageState extends State<ProfileSetupPage> {
-  final UserProfile profile = UserProfile();
+  final UserProfile profile = UserProfile(province: '');
   int currentStep = 1;
   final int totalSteps = 5;
+  bool isLoading = false;
 
-  // Sample subjects and interests
   final List<String> subjects = [
     "Mathematics",
     "Mathematical Literacy",
@@ -69,25 +69,55 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
 
   double get progress => currentStep / totalSteps;
 
-  void handleNext() {
+  Future<void> handleNext() async {
     if (currentStep < totalSteps) {
       setState(() => currentStep++);
-    } else {
-      // Complete profile setup
-      widget.onComplete(profile);
+      return;
+    }
 
-      // Navigate to DashboardScreen
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => dashboard_page.DashboardScreen(
-            userProfile: profile, // this is the UserProfile from data/profile/user_profile.dart
-            onCourseSelect: (course) {},
-            onNavigate: (screen) {},
-          ),
-        ),
+    setState(() => isLoading = true);
+
+    try {
+      final response = await Service().profileSetUp(
+        province: profile.province ?? "",  // Send first element as string
+        grade: profile.grade ?? "",
+        interests: profile.interests,
+        subjects: profile.subjects,
+        financialBackground: profile.financialBackground?.displayName ?? "",
       );
 
+
+
+
+
+
+
+
+
+      setState(() => isLoading = false);
+
+      if (response.success) {
+        widget.onComplete(profile);
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => dashboard_page.DashboardScreen(
+              userProfile: profile,
+              onCourseSelect: (course) {},
+              onNavigate: (screen) {},
+            ),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(response.message)));
+      }
+    } catch (e) {
+      setState(() => isLoading = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Error: $e")));
     }
   }
 
@@ -119,20 +149,25 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            DropdownButton<Grade>(
+            DropdownButton<String>(
               value: profile.grade,
               hint: const Text("Select your grade"),
               isExpanded: true,
-              onChanged: (Grade? value) {
-                setState(() => profile.grade = value);
+              onChanged: (value) {
+                setState(() => profile.grade = value); // store as string
               },
-              items: Grade.values.map((g) {
-                return DropdownMenuItem(
-                  value: g,
-                  child: Text(g.displayName),
-                );
-              }).toList(),
-            ),
+              items: [
+                "Grade 8",
+                "Grade 9",
+                "Grade 10",
+                "Grade 11",
+                "Grade 12",
+              ].map((g) => DropdownMenuItem(
+                value: g,
+                child: Text(g),
+              )).toList(),
+            )
+            ,
           ],
         );
 
@@ -153,12 +188,15 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                 return ChoiceChip(
                   label: Text(subject),
                   selected: isSelected,
-                  onSelected: (_) {
+                  onSelected: (selected) {
                     setState(() {
-                      if (isSelected) {
-                        profile.subjects.remove(subject);
+                      profile.subjects = List<String>.from(profile.subjects);
+                      if (selected) {
+                        if (!profile.subjects.contains(subject)) {
+                          profile.subjects.add(subject);
+                        }
                       } else {
-                        profile.subjects.add(subject);
+                        profile.subjects.remove(subject);
                       }
                     });
                   },
@@ -185,12 +223,15 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                 return ChoiceChip(
                   label: Text(interest),
                   selected: isSelected,
-                  onSelected: (_) {
+                  onSelected: (selected) {
                     setState(() {
-                      if (isSelected) {
-                        profile.interests.remove(interest);
+                      profile.interests = List<String>.from(profile.interests);
+                      if (selected) {
+                        if (!profile.interests.contains(interest)) {
+                          profile.interests.add(interest);
+                        }
                       } else {
-                        profile.interests.add(interest);
+                        profile.interests.remove(interest);
                       }
                     });
                   },
@@ -201,13 +242,25 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
         );
 
       case 4:
-        return FinancialStep(
-          selectedBackground: profile.financialBackground,
-          onSelect: (fb) {
-            setState(() {
-              profile.financialBackground = fb;
-            });
-          },
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Tell us about your financial background",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              "This will help us suggest relevant bursaries and funding opportunities.",
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+            const SizedBox(height: 16),
+            FinancialStep(
+              selectedBackground: profile.financialBackground,
+              onSelect: (fb) =>
+                  setState(() => profile.financialBackground = fb),
+            ),
+          ],
         );
 
       case 5:
@@ -219,17 +272,19 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            DropdownButton<Province>(
-              value: profile.province,
+            DropdownButton<String>(
+              value: provinces.contains(profile.province) ? profile.province : null,
               hint: const Text("Select your province"),
               isExpanded: true,
-              onChanged: (Province? value) {
-                setState(() => profile.province = value);
+              onChanged: (String? value) {
+                setState(() {
+                  profile.province = value; // single String
+                });
               },
-              items: Province.values.map((p) {
+              items: provinces.map((p) {
                 return DropdownMenuItem(
                   value: p,
-                  child: Text(p.displayName),
+                  child: Text(p),
                 );
               }).toList(),
             ),
@@ -244,14 +299,11 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Profile Setup"),
-      ),
+      appBar: AppBar(title: const Text("Profile Setup")),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // Progress bar
             LinearProgressIndicator(
               value: progress,
               minHeight: 6,
@@ -259,12 +311,8 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
               color: Colors.blue,
             ),
             const SizedBox(height: 16),
-
-            // Step content
             Expanded(child: SingleChildScrollView(child: renderStep())),
-
             const SizedBox(height: 16),
-            // Navigation buttons
             Row(
               children: [
                 if (currentStep > 1)
@@ -277,9 +325,21 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                 if (currentStep > 1) const SizedBox(width: 16),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: canProceed() ? handleNext : null,
-                    child: Text(
-                        currentStep == totalSteps ? "Complete Setup" : "Next"),
+                    onPressed: canProceed() && !isLoading ? handleNext : null,
+                    child: isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : Text(
+                            currentStep == totalSteps
+                                ? "Complete Setup"
+                                : "Next",
+                          ),
                   ),
                 ),
               ],

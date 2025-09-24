@@ -8,12 +8,15 @@ import 'package:flutter_session_manager/flutter_session_manager.dart';
 import 'package:http/http.dart' as http;
 
 import '../data/message_response.dart';
+import '../data/profile/user_profile.dart' as profile_data;
+import '../data/signup_response.dart';
 import '../data/user.dart';
+import '../utils/profile_setup_data.dart';
 
 class Service {
 
-    final String authBaseUrl = 'http://154.0.166.216:8090/api/auth';
-    final String farmBaseUrl = 'http://154.0.166.216:8090/api/lb';
+    final String authBaseUrl = 'http://154.0.166.216:8091/api/auth';
+    final String farmBaseUrl = 'http://154.0.166.216:8091/api/lb';
 
     final Dio dio;
 
@@ -64,6 +67,7 @@ class Service {
             if (response.statusCode == 200 || response.statusCode == 400) {
                 // Parse the response body and return a MessageResponse object
                 final responseData = jsonDecode(response.body);
+                await SessionManager().set("userId", SignupResponse.fromJson(responseData).userId);
                 return MessageResponse.fromJson(responseData);
             } else {
                 // Handle other status codes
@@ -77,7 +81,7 @@ class Service {
         }
     }
 
-    Future<User> login(String email, String password) async {
+    Future<profile_data.UserProfile> login(String email, String password) async {
         try {
             final response = await dio.post(
                 '$authBaseUrl/signin',
@@ -93,15 +97,47 @@ class Service {
                 ),
             );
 
-            final user = User.fromJson(response.data);
+            final profile = profile_data.UserProfile.fromJson(response.data);
+
+            // store raw json for later if needed
             await SessionManager().set("userData", jsonEncode(response.data));
 
-            return user;
+            return profile;
         } catch (e) {
             print('Login failed: $e');
             rethrow;
         }
     }
+
+
+    // Future<User> login(String email, String password) async {
+    //     try {
+    //         final response = await dio.post(
+    //             '$authBaseUrl/signin',
+    //             data: {
+    //                 "username": email,
+    //                 "password": password,
+    //             },
+    //             options: Options(
+    //                 headers: {
+    //                     'Content-Type': 'application/json',
+    //                     'accept': '*/*',
+    //                 },
+    //             ),
+    //         );
+    //
+    //         print("🔍 Raw response status: ${response.statusCode}");
+    //         print("🔍 Raw response body: ${response.data}");
+    //
+    //         final user = User.fromJson(response.data);
+    //         await SessionManager().set("userData", jsonEncode(response.data));
+    //
+    //         return user;
+    //     } catch (e) {
+    //         print('Login failed: $e');
+    //         rethrow;
+    //     }
+    // }
 
 
 
@@ -218,6 +254,66 @@ class Service {
                 message: "Error while updating login details, please try again.");
         }
     }
+
+    Future<MessageResponse> profileSetUp({
+        required String province,
+        required String? grade,
+        required List<String> interests,
+        required List<String> subjects,
+        required String financialBackground,
+    }) async {
+        final url = Uri.parse('$authBaseUrl/profile-setup');
+
+        final userId = await SessionManager().get("userId");
+        final Map<String, dynamic> requestBody = {
+            "userId": userId,
+            "province": province,
+            "grade": grade,
+            "interests": interests,
+            "subjects": subjects,
+            "financialBackground": financialBackground,
+        };
+
+        try {
+            final response = await http.post(
+                url,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'accept': '*/*',
+                },
+                body: jsonEncode(requestBody),
+            );
+
+            print("🔍 Raw response status: ${response.statusCode}");
+            print("🔍 Raw response body: ${response.body}");
+
+            if (response.statusCode == 200 || response.statusCode == 400) {
+                // Parse the response body and return a MessageResponse object
+                final responseData = jsonDecode(response.body);
+                return MessageResponse.fromJson(responseData);
+            } else {
+                // Handle other status codes
+                return MessageResponse(
+                    success: false, message: "An unknown error occurred.");
+            }
+        } catch (e) {
+            // Handle network or other errors
+            return MessageResponse(
+                success: false, message: "Error during signup: $e");
+        }
+    }
+
+    // {
+    // "province": "string",
+    // "grade": "string",
+    // "interests": [
+    // "string"
+    // ],
+    // "subjects": [
+    // "string"
+    // ],
+    // "financialBackground": "string"
+    // }
 
 
 }

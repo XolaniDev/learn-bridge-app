@@ -4,6 +4,7 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import '../../data/profile/user_profile.dart';
 import '../../service/service.dart';
+import '../dashboard/dashboard_page.dart' as dashboard_page;
 import '../profile_page/profile_setup_page.dart';
 import '../welcome_page/welcome_page.dart';
 
@@ -66,6 +67,25 @@ class _AuthScreenState extends State<AuthScreen>
         _signupPhoneController.clear();
         _signupPasswordController.clear();
         _signupConfirmPasswordController.clear();
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ProfileSetupPage(
+              onComplete: (UserProfile profile) {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => WelcomePage(onContinue: () {  },),
+                  ),
+                );
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Profile setup completed!')),
+                );
+              },
+            ),
+          ),
+        );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(response.message ?? "Signup failed")),
@@ -91,33 +111,37 @@ class _AuthScreenState extends State<AuthScreen>
     _tabController = TabController(length: 2, vsync: this);
   }
 
-  void _handleLogin() {
+  Future<void> _handleLogin() async {
     if (_loginFormKey.currentState!.validate()) {
-      // Navigate to ProfileSetupPage after login
-      // After successful login
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ProfileSetupPage(
-            onComplete: (UserProfile profile) {
-              // After profile setup, navigate to HomePage (or any screen)
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => WelcomePage(onContinue: () {  },), // replace with your home screen
-                ),
-              );
-              // Optional: show a success message
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Profile setup completed!')),
-              );
-            },
+      final username = _loginEmailController.text.trim();
+      final password = _loginPasswordController.text.trim();
+
+      try {
+        final profile = await Service().login(username, password);
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => dashboard_page.DashboardScreen(
+              userProfile: profile,
+              onNavigate: (screen) {},
+              onCourseSelect: (course) {},
+            ),
           ),
-        ),
-      );
-      ;
+        );
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Welcome back ${profile.name}!')),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Login failed: $e")),
+        );
+      }
     }
   }
+
+
 
   @override
   Widget build(BuildContext context) {
