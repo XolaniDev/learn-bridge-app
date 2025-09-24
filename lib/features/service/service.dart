@@ -98,8 +98,6 @@ class Service {
             );
 
             final profile = profile_data.UserProfile.fromJson(response.data);
-
-            // store raw json for later if needed
             await SessionManager().set("userData", jsonEncode(response.data));
 
             return profile;
@@ -139,6 +137,32 @@ class Service {
     //     }
     // }
 
+    Future<profile_data.UserProfile?> getUserById() async {
+        try {
+            final userId = await SessionManager().get("userId");
+            final token = await SessionManager().get("token"); // get token
+            final url = Uri.parse("$farmBaseUrl/find-user-by-id/$userId");
+
+            final response = await http.get(
+                url,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer $token',  // include the token
+                },
+            );
+
+            if (response.statusCode == 200) {
+                final Map<String, dynamic> data = json.decode(response.body);
+                return profile_data.UserProfile.fromJson(data);
+            } else {
+                print("Failed to fetch user: ${response.statusCode} - ${response.body}");
+                return null;
+            }
+        } catch (e) {
+            print("Error fetching user: $e");
+            return null;
+        }
+    }
 
 
     Future<MessageResponse> updateUser(
@@ -255,6 +279,7 @@ class Service {
         }
     }
 
+
     Future<MessageResponse> profileSetUp({
         required String province,
         required String? grade,
@@ -303,17 +328,54 @@ class Service {
         }
     }
 
-    // {
-    // "province": "string",
-    // "grade": "string",
-    // "interests": [
-    // "string"
-    // ],
-    // "subjects": [
-    // "string"
-    // ],
-    // "financialBackground": "string"
-    // }
+    Future<MessageResponse> updateProfile({
+        required String province,
+        required String? grade,
+        required List<String> interests,
+        required List<String> subjects,
+        required String financialBackground,
+    }) async {
+        final url = Uri.parse('$farmBaseUrl/update-profile-setup');
 
+        final userId = await SessionManager().get("userId");
+        print("Failed to fetch user: $userId");
+
+        final Map<String, dynamic> requestBody = {
+            "userId": userId,
+            "province": province,
+            "grade": grade,
+            "interests": interests,
+            "subjects": subjects,
+            "financialBackground": financialBackground,
+        };
+
+        try {
+            final response = await http.post(
+                url,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'accept': '*/*',
+                },
+                body: jsonEncode(requestBody),
+            );
+
+            print("🔍 Raw response status: ${response.statusCode}");
+            print("🔍 Raw response body: ${response.body}");
+
+            if (response.statusCode == 200 || response.statusCode == 400) {
+                // Parse the response body and return a MessageResponse object
+                final responseData = jsonDecode(response.body);
+                return MessageResponse.fromJson(responseData);
+            } else {
+                // Handle other status codes
+                return MessageResponse(
+                    success: false, message: "An unknown error occurred.");
+            }
+        } catch (e) {
+            // Handle network or other errors
+            return MessageResponse(
+                success: false, message: "Error during signup: $e");
+        }
+    }
 
 }

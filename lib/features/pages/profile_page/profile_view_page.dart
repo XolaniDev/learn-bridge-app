@@ -1,39 +1,104 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../data/profile/user_profile.dart';
+import '../../service/service.dart';
+import 'package:http/http.dart' as http;
+import 'package:flutter_session_manager/flutter_session_manager.dart';
 
-class ViewFullProfilePage extends StatelessWidget {
-  final UserProfile? userProfile;
+class ViewProfilePage extends StatefulWidget {
   final VoidCallback onBack;
 
-  const ViewFullProfilePage({
-    super.key,
-    required this.userProfile,
-    required this.onBack,
-  });
+  const ViewProfilePage({super.key, required this.onBack});
+
+  @override
+  State<ViewProfilePage> createState() => _ViewProfilePageState();
+}
+
+class _ViewProfilePageState extends State<ViewProfilePage> {
+  UserProfile? userProfile;
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserProfile();
+  }
+
+  /// Fetch user profile from backend
+  Future<void> _fetchUserProfile() async {
+    try {
+      final userId = await SessionManager().get("userId");
+      final url = Uri.parse("http://154.0.166.216:8091/api/lb/find-user-by-id/$userId");
+
+      final response = await http.get(url, headers: {
+        'Accept': 'application/json',
+      });
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body) as Map<String, dynamic>;
+        setState(() {
+          userProfile = UserProfile.fromJson(data);
+          isLoading = false;
+        });
+      } else {
+        print("Failed to fetch profile: ${response.statusCode}");
+        setState(() {
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      print("Error fetching user profile: $e");
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     if (userProfile == null) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text("My Profile"),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: onBack,
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text("Failed to load profile"),
+              const SizedBox(height: 16),
+              OutlinedButton(
+                onPressed: widget.onBack,
+                child: const Text("Go Back"),
+              )
+            ],
           ),
-        ),
-        body: const Center(
-          child: Text("No profile data available"),
         ),
       );
     }
 
+    // --- Calculate profile completion ---
+    final totalFields = 5;
+    final completedFields = [
+      userProfile!.grade,
+      userProfile!.province,
+      userProfile!.financialBackground,
+      userProfile!.subjects.isNotEmpty,
+      userProfile!.interests.isNotEmpty
+    ].where((e) => e != null && e != false).length;
+
+    final completionPercentage = ((completedFields / totalFields) * 100).round();
+
+    // --- UI code here ---
     return Scaffold(
       appBar: AppBar(
-        title: const Text("My Profile"),
+        title: const Text("View Profile"),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: onBack,
+          onPressed: widget.onBack,
         ),
       ),
       body: SingleChildScrollView(
@@ -41,59 +106,26 @@ class ViewFullProfilePage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Basic Info Table
-            _buildSection(
-              title: "👤 Basic Information",
-              data: [
-                {'label': 'Grade', 'value': userProfile!.grade?.toString() ?? 'N/A'},
-                {'label': 'Province', 'value': userProfile!.province?.toString() ?? 'N/A'},
-                {
-                  'label': 'Financial Background',
-                  'value': "${userProfile!.financialBackground?.toString() ?? 'Unknown'} Income"
-                },
-              ],
-            ),
-
-            const SizedBox(height: 16),
-
-            // Subjects Chips
-            _buildSection(
-              title: "📚 My Subjects (${userProfile!.subjects.length})",
-              children: userProfile!.subjects
-                  .map((subject) => _buildChip(subject?.toString() ?? 'N/A', Colors.blue[100]!))
-                  .toList(),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Interests Chips
-            _buildSection(
-              title: "❤️ My Interests (${userProfile!.interests.length})",
-              children: userProfile!.interests
-                  .map((interest) => _buildChip(interest?.toString() ?? 'N/A', Colors.green[100]!))
-                  .toList(),
-            ),
-
-            const SizedBox(height: 16),
-
+            // Profile Card
+            _buildProfileCard(completionPercentage),
+            const SizedBox(height: 20),
+            // Academic Info
+            _buildInfoCard("👤", "Current Grade", userProfile!.grade ?? "-", Colors.blue),
+            _buildInfoCard("📍", "Province", userProfile!.province ?? "-", Colors.green),
+            _buildInfoCard("💰", "Financial Background",
+                "${userProfile!.financialBackground ?? '-'} Income", Colors.purple),
+            const SizedBox(height: 20),
+            // Subjects
+            _buildListCard("My Subjects", userProfile!.subjects, Colors.blue),
+            const SizedBox(height: 20),
+            // Interests
+            _buildListCard("Career Interests", userProfile!.interests, Colors.green),
+            const SizedBox(height: 20),
             // Profile Strength
-            _buildSection(
-              title: "⭐ Profile Strength",
-              children: [
-                _buildInfoRow("Profile Completion", "100%"),
-                const SizedBox(height: 6),
-                LinearProgressIndicator(
-                  value: 1,
-                  backgroundColor: Colors.purple[100],
-                  color: Colors.purple[600],
-                  minHeight: 6,
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  "Great! Your profile is complete and ready for personalized career recommendations.",
-                  style: TextStyle(fontSize: 13, color: Colors.black54),
-                ),
-              ],
+            _buildStrengthCard(
+              userProfile!.subjects.length,
+              userProfile!.interests.length,
+              completionPercentage,
             ),
           ],
         ),
@@ -101,96 +133,121 @@ class ViewFullProfilePage extends StatelessWidget {
     );
   }
 
-  // Section widget that can handle both table data and children widgets
-  Widget _buildSection({
-    required String title,
-    List<Map<String, String>>? data,
-    List<Widget>? children,
-  }) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-
-            // Table for key-value data
-            if (data != null && data.isNotEmpty)
-              Table(
-                columnWidths: const {
-                  0: FlexColumnWidth(1),
-                  1: FlexColumnWidth(1),
-                },
-                children: data.map((item) {
-                  return TableRow(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
-                        child: Text(item['label'] ?? '',
-                            style: const TextStyle(color: Colors.black54)),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
-                        child: Text(
-                          item['value'] ?? '',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                          textAlign: TextAlign.right,
-                        ),
-                      ),
-                    ],
-                  );
-                }).toList(),
-              ),
-
-            // Additional widgets like Chips or ProgressIndicators
-            if (children != null && children.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              ...children,
-            ],
-          ],
-        ),
+  Widget _buildProfileCard(int completionPercentage) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10, spreadRadius: 1)],
       ),
-    );
-  }
-
-  // Row for showing a label and value
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: Colors.black54)),
-          Flexible(
-            child: Text(
-              value,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-              textAlign: TextAlign.right,
-            ),
+          Row(
+            children: [
+              Container(
+                width: 70,
+                height: 70,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  gradient: const LinearGradient(colors: [Colors.blue, Colors.purple]),
+                ),
+                child: const Center(child: Text("👤", style: TextStyle(fontSize: 28))),
+              ),
+              const SizedBox(width: 16),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("${userProfile!.grade ?? '-'} Learner",
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text("📍 ${userProfile!.province ?? '-'}",
+                      style: const TextStyle(fontSize: 14, color: Colors.black54)),
+                ],
+              )
+            ],
+          ),
+          const SizedBox(height: 16),
+          LinearProgressIndicator(
+            value: completionPercentage / 100,
+            backgroundColor: Colors.grey.shade200,
+            color: Colors.blue,
+            minHeight: 10,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            completionPercentage == 100
+                ? "🎉 Excellent! Your profile is complete."
+                : "Keep building your profile for better career matches.",
           ),
         ],
       ),
     );
   }
 
-  // Chip widget for subjects and interests
-  Widget _buildChip(String text, Color color) {
+  Widget _buildInfoCard(String icon, String title, String value, Color color) {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(8),
+        color: color.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.2)),
       ),
-      child: Text(
-        text,
-        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(children: [CircleAvatar(backgroundColor: color, child: Text(icon)), const SizedBox(width: 8), Text(title)]),
+          Text(value, style: TextStyle(fontWeight: FontWeight.bold, color: color)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildListCard(String title, List<String> items, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 6)],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          ...items.map((item) => Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+                color: color.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: color.withOpacity(0.2))),
+            child: Text(item),
+          )),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStrengthCard(int subjectsCount, int interestsCount, int completionPercentage) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.orange.shade50,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.orange.shade100),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text("Profile Strength", style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          Text("Subjects: $subjectsCount"),
+          Text("Interests: $interestsCount"),
+          Text("Completion: $completionPercentage%"),
+        ],
       ),
     );
   }

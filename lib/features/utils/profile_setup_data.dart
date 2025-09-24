@@ -13,11 +13,11 @@ final List<String> provinces = [
 
 
 enum Grade {
+  grade7("Grade 7"),
   grade8("Grade 8"),
   grade9("Grade 9"),
   grade10("Grade 10"),
-  grade11("Grade 11"),
-  grade12("Grade 12");
+  grade11("Grade 11");
 
   final String displayName;
   const Grade(this.displayName);
