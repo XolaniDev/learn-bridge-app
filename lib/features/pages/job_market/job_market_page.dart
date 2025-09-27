@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:learn_bridge_v2/features/data/profile/user_profile.dart';
+import 'package:learn_bridge_v2/features/data/user_response.dart';
 
 class JobMarketPage extends StatefulWidget {
   final VoidCallback onBack;
 
-  const JobMarketPage({super.key, required this.onBack, required UserProfile userProfile});
+  const JobMarketPage({super.key, required this.onBack, required UserResponse? userProfile});
 
   @override
   State<JobMarketPage> createState() => _JobMarketPageState();

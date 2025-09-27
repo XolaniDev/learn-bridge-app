@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:learn_bridge_v2/features/data/user_response.dart';
 import 'package:learn_bridge_v2/features/pages/profile_page/profile_view_page.dart';
 import 'package:learn_bridge_v2/features/pages/profile_page/update_profile.dart';
+import 'package:learn_bridge_v2/features/pages/profile_page/update_user.dart';
 import '../../data/profile/user_profile.dart';
 
-
 class ProfilePage extends StatelessWidget {
-  final UserProfile? userProfile;
-  final VoidCallback onLogout;
+  final UserResponse? userProfile;
+  // final VoidCallback onLogout;
   final Function(String) onNavigate;
 
   const ProfilePage({
     super.key,
     required this.userProfile,
     required this.onNavigate,
-    required this.onLogout, required Null Function() onUpdateProfile,
+    // required this.onLogout,
+
   });
 
   @override
@@ -57,11 +59,12 @@ class ProfilePage extends StatelessWidget {
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
                               foreground: Paint()
-                                ..shader = const LinearGradient(
-                                  colors: [Colors.black87, Colors.blueGrey],
-                                ).createShader(
-                                  const Rect.fromLTWH(0, 0, 200, 70),
-                                ),
+                                ..shader =
+                                    const LinearGradient(
+                                      colors: [Colors.black87, Colors.blueGrey],
+                                    ).createShader(
+                                      const Rect.fromLTWH(0, 0, 200, 70),
+                                    ),
                             ),
                           ),
                           const Text(
@@ -69,7 +72,7 @@ class ProfilePage extends StatelessWidget {
                             style: TextStyle(color: Colors.grey, fontSize: 11),
                           ),
                         ],
-                      )
+                      ),
                     ],
                   ),
 
@@ -114,10 +117,11 @@ class ProfilePage extends StatelessWidget {
                         ),
                         Text(
                           [
+
                             if (userProfile?.province != null)
                               "📍 ${userProfile!.province}",
                             if (userProfile?.grade != null)
-                              "• Grade ${userProfile!.grade}",
+                              "• ${userProfile!.grade}",
                           ].join(" "),
                           style: const TextStyle(color: Colors.grey),
                         ),
@@ -127,8 +131,10 @@ class ProfilePage extends StatelessWidget {
                           children: [
                             ...List.generate(
                               5,
-                                  (index) => Container(
-                                margin: const EdgeInsets.symmetric(horizontal: 2),
+                              (index) => Container(
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: 2,
+                                ),
                                 width: 8,
                                 height: 8,
                                 decoration: const BoxDecoration(
@@ -147,7 +153,7 @@ class ProfilePage extends StatelessWidget {
                                 fontWeight: FontWeight.bold,
                                 color: Colors.green,
                               ),
-                            )
+                            ),
                           ],
                         ),
                       ],
@@ -160,7 +166,8 @@ class ProfilePage extends StatelessWidget {
                   _buildOptionCard(
                     context,
                     title: "View Full Profile",
-                    description: "Detailed overview of your academic profile and progress",
+                    description:
+                        "Detailed overview of your academic profile and progress",
                     emoji: "📋",
                     color: Colors.black54,
                     onTap: () {
@@ -178,7 +185,8 @@ class ProfilePage extends StatelessWidget {
                   _buildOptionCard(
                     context,
                     title: "Update Profile",
-                    description: "Edit subjects, interests, and personal preferences",
+                    description:
+                        "Edit subjects, interests, and personal preferences",
                     emoji: "✏️",
                     color: Colors.black54,
                     onTap: () {
@@ -186,7 +194,8 @@ class ProfilePage extends StatelessWidget {
                         context,
                         MaterialPageRoute(
                           builder: (context) => ProfileUpdatePage(
-                            userProfile: userProfile!, // <-- pass the current profile
+                            user: userProfile!,
+                            // <-- pass the current profile
                             onBack: () => Navigator.pop(context),
                           ),
                         ),
@@ -197,11 +206,26 @@ class ProfilePage extends StatelessWidget {
                   _buildOptionCard(
                     context,
                     title: "Update Learner",
-                    description:
-                    "Edit personal details",
+                    description: "Edit personal details",
                     emoji: "✏️",
                     color: Colors.black54,
-                    onTap: () => onNavigate("profile-setup"),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => UpdateUserPage(
+                            user: userProfile!,
+                            // <-- pass the current profile
+                            onBack: () => Navigator.pop(context),
+                            userId:'' ,
+                            name:userProfile!.name,
+                            surname: userProfile!.surname,
+                            email: userProfile!.email,
+                            phone: userProfile!.phoneNumber,
+                          ),
+                        ),
+                      );
+                    },
                   ),
                   _buildOptionCard(
                     context,
@@ -209,7 +233,16 @@ class ProfilePage extends StatelessWidget {
                     description: "Sign out of your account securely",
                     emoji: "🚪",
                     color: Colors.black54,
-                    onTap: onLogout,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ViewProfilePage(
+                            onBack: () => Navigator.pop(context),
+                          ),
+                        ),
+                      );
+                    },
                   ),
 
                   const SizedBox(height: 20),
@@ -236,7 +269,9 @@ class ProfilePage extends StatelessWidget {
                               Text(
                                 "📊 Quick Overview",
                                 style: TextStyle(
-                                    fontSize: 18, fontWeight: FontWeight.bold),
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ],
                           ),
@@ -248,8 +283,8 @@ class ProfilePage extends StatelessWidget {
                                   count: userProfile!.subjects.length,
                                   label: "Subjects Selected",
                                   color: Colors.blue,
-                                  progress:
-                                  (userProfile!.subjects.length / 10).clamp(0, 1),
+                                  progress: (userProfile!.subjects.length / 10)
+                                      .clamp(0, 1),
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -258,8 +293,8 @@ class ProfilePage extends StatelessWidget {
                                   count: userProfile!.interests.length,
                                   label: "Career Interests",
                                   color: Colors.green,
-                                  progress:
-                                  (userProfile!.interests.length / 8).clamp(0, 1),
+                                  progress: (userProfile!.interests.length / 8)
+                                      .clamp(0, 1),
                                 ),
                               ),
                             ],
@@ -277,13 +312,13 @@ class ProfilePage extends StatelessWidget {
   }
 
   Widget _buildOptionCard(
-      BuildContext context, {
-        required String title,
-        required String description,
-        required String emoji,
-        Color color = Colors.blue,
-        required VoidCallback onTap,
-      }) {
+    BuildContext context, {
+    required String title,
+    required String description,
+    required String emoji,
+    Color color = Colors.blue,
+    required VoidCallback onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -320,15 +355,15 @@ class ProfilePage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title,
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: color)),
                   Text(
-                    description,
-                    style: const TextStyle(color: Colors.grey),
+                    title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: color,
+                    ),
                   ),
+                  Text(description, style: const TextStyle(color: Colors.grey)),
                 ],
               ),
             ),

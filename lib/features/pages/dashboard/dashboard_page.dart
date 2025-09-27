@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:learn_bridge_v2/features/data/user_response.dart';
 import '../../data/profile/user_profile.dart' as profile_data;
 import '../../data/course/course.dart' as course_data;
 import '../course_details/course_detail_page.dart';
 import '../job_market/job_market_page.dart';
-import '../profile_page/profile_page.dart'; // ✅ import ProfilePage
+import '../profile_page/profile_page.dart';
+import '../../service/service.dart';
 
 class DashboardScreen extends StatelessWidget {
-  final profile_data.UserProfile userProfile;
+  final UserResponse? userProfile;
   final void Function(String) onNavigate;
 
   DashboardScreen({
@@ -15,6 +17,7 @@ class DashboardScreen extends StatelessWidget {
     required this.onNavigate,
     required Null Function(dynamic course) onCourseSelect,
   });
+
 
   final List<course_data.Course> sampleCourses = [
     course_data.Course(
@@ -105,7 +108,7 @@ class DashboardScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Welcome back, ${userProfile.name}!',
+                      'Welcome back, ${userProfile?.name}!',
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -126,13 +129,13 @@ class DashboardScreen extends StatelessWidget {
                   children: [
                     _buildStatCard(
                       'Subjects',
-                      userProfile.subjects.length,
+                      userProfile!.subjects.length,
                       Icons.book,
                       Colors.blue,
                     ),
                     _buildStatCard(
                       'Interests',
-                      userProfile.interests.length,
+                      userProfile!.interests.length,
                       Icons.star,
                       Colors.green,
                     ),
@@ -390,17 +393,12 @@ class DashboardScreen extends StatelessWidget {
               );
               break;
             case 3:
-              // ✅ Navigate to ProfilePage
               Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => ProfilePage(
                     userProfile: userProfile,
-                    onUpdateProfile: () {
-                      Navigator.pop(context); // placeholder
-                    },
                     onNavigate: (String p1) {},
-                    onLogout: () {},
                   ),
                 ),
               );

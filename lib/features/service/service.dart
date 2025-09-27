@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 
 import '../data/message_response.dart';
 import '../data/profile/user_profile.dart' as profile_data;
+import '../data/user_response.dart';
 import '../data/signup_response.dart';
 import '../data/user.dart';
 import '../utils/profile_setup_data.dart';
@@ -16,7 +17,7 @@ import '../utils/profile_setup_data.dart';
 class Service {
 
     final String authBaseUrl = 'http://154.0.166.216:8091/api/auth';
-    final String farmBaseUrl = 'http://154.0.166.216:8091/api/lb';
+    final String lbBaseUrl = 'http://154.0.166.216:8091/api/lb';
 
     final Dio dio;
 
@@ -65,17 +66,14 @@ class Service {
             print("🔍 Raw response body: ${response.body}");
 
             if (response.statusCode == 200 || response.statusCode == 400) {
-                // Parse the response body and return a MessageResponse object
                 final responseData = jsonDecode(response.body);
                 await SessionManager().set("userId", SignupResponse.fromJson(responseData).userId);
                 return MessageResponse.fromJson(responseData);
             } else {
-                // Handle other status codes
                 return MessageResponse(
                     success: false, message: "An unknown error occurred.");
             }
         } catch (e) {
-            // Handle network or other errors
             return MessageResponse(
                 success: false, message: "Error during signup: $e");
         }
@@ -98,6 +96,7 @@ class Service {
             );
 
             final profile = profile_data.UserProfile.fromJson(response.data);
+            await SessionManager().set("userId", UserResponse.fromJson(response.data).id);
             await SessionManager().set("userData", jsonEncode(response.data));
 
             return profile;
@@ -108,73 +107,43 @@ class Service {
     }
 
 
-    // Future<User> login(String email, String password) async {
-    //     try {
-    //         final response = await dio.post(
-    //             '$authBaseUrl/signin',
-    //             data: {
-    //                 "username": email,
-    //                 "password": password,
-    //             },
-    //             options: Options(
-    //                 headers: {
-    //                     'Content-Type': 'application/json',
-    //                     'accept': '*/*',
-    //                 },
-    //             ),
-    //         );
-    //
-    //         print("🔍 Raw response status: ${response.statusCode}");
-    //         print("🔍 Raw response body: ${response.data}");
-    //
-    //         final user = User.fromJson(response.data);
-    //         await SessionManager().set("userData", jsonEncode(response.data));
-    //
-    //         return user;
-    //     } catch (e) {
-    //         print('Login failed: $e');
-    //         rethrow;
-    //     }
-    // }
-
-    Future<profile_data.UserProfile?> getUserById() async {
+    Future<UserResponse?> getUserById() async {
         try {
-            final userId = await SessionManager().get("userId");
-            final token = await SessionManager().get("token"); // get token
-            final url = Uri.parse("$farmBaseUrl/find-user-by-id/$userId");
 
-            final response = await http.get(
-                url,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer $token',  // include the token
-                },
+            final userId = await SessionManager().get("userId");
+            final response = await dio.get(
+                '$lbBaseUrl/find-user-by-id/$userId',
+                options: Options(
+                    headers: {
+                        'accept': '*/*',
+                    },
+                ),
             );
 
             if (response.statusCode == 200) {
-                final Map<String, dynamic> data = json.decode(response.body);
-                return profile_data.UserProfile.fromJson(data);
+                return UserResponse.fromJson(response.data);
             } else {
-                print("Failed to fetch user: ${response.statusCode} - ${response.body}");
+                print("Failed to fetch user: ${response.statusCode} - ${response.data}");
                 return null;
             }
         } catch (e) {
-            print("Error fetching user: $e");
-            return null;
+            print('Failed to fetch or store farm data: $e');
+            rethrow;
         }
     }
 
 
+
     Future<MessageResponse> updateUser(
-    {required String id,
-        required String farmId,
+    {
         required String name,
         required String surname,
         required String email,
         required String phoneNumber}) async {
+
+        final userId = await SessionManager().get("userId");
         final Map<String, dynamic> requestBody = {
-            "id": id,
-            "farmId": farmId,
+            "userId": userId,
             "name": name,
             "surname": surname,
             "email": email,
@@ -183,7 +152,7 @@ class Service {
 
         try {
             final response = await dio.post(
-                '$farmBaseUrl/update-user',
+                '$lbBaseUrl/update-user',
                 data: jsonEncode(requestBody),
                 options: Options(
                     headers: {
@@ -240,7 +209,7 @@ class Service {
 
         try {
             final response = await dio.post(
-                '$farmBaseUrl/update-login-details',
+                '$lbBaseUrl/update-login-details',
                 data: jsonEncode(requestBody),
                 options: Options(
                     headers: {
@@ -309,20 +278,15 @@ class Service {
                 body: jsonEncode(requestBody),
             );
 
-            print("🔍 Raw response status: ${response.statusCode}");
-            print("🔍 Raw response body: ${response.body}");
 
             if (response.statusCode == 200 || response.statusCode == 400) {
-                // Parse the response body and return a MessageResponse object
                 final responseData = jsonDecode(response.body);
                 return MessageResponse.fromJson(responseData);
             } else {
-                // Handle other status codes
                 return MessageResponse(
                     success: false, message: "An unknown error occurred.");
             }
         } catch (e) {
-            // Handle network or other errors
             return MessageResponse(
                 success: false, message: "Error during signup: $e");
         }
@@ -335,10 +299,7 @@ class Service {
         required List<String> subjects,
         required String financialBackground,
     }) async {
-        final url = Uri.parse('$farmBaseUrl/update-profile-setup');
-
         final userId = await SessionManager().get("userId");
-        print("Failed to fetch user: $userId");
 
         final Map<String, dynamic> requestBody = {
             "userId": userId,
@@ -350,29 +311,25 @@ class Service {
         };
 
         try {
-            final response = await http.post(
-                url,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'accept': '*/*',
-                },
-                body: jsonEncode(requestBody),
+            final response = await dio.post(
+                '$lbBaseUrl/update-profile-setup',
+                data: jsonEncode(requestBody),
+                options: Options(
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'accept': '*/*',
+                    },
+                ),
             );
 
-            print("🔍 Raw response status: ${response.statusCode}");
-            print("🔍 Raw response body: ${response.body}");
-
             if (response.statusCode == 200 || response.statusCode == 400) {
-                // Parse the response body and return a MessageResponse object
-                final responseData = jsonDecode(response.body);
-                return MessageResponse.fromJson(responseData);
+                return MessageResponse(
+                    success: true, message: "Profile updated successfully.");
             } else {
-                // Handle other status codes
                 return MessageResponse(
                     success: false, message: "An unknown error occurred.");
             }
         } catch (e) {
-            // Handle network or other errors
             return MessageResponse(
                 success: false, message: "Error during signup: $e");
         }

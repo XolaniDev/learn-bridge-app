@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:learn_bridge_v2/features/data/user_response.dart';
 import '../../data/profile/user_profile.dart';
 import '../../service/service.dart';
 import 'package:http/http.dart' as http;
@@ -15,7 +16,7 @@ class ViewProfilePage extends StatefulWidget {
 }
 
 class _ViewProfilePageState extends State<ViewProfilePage> {
-  UserProfile? userProfile;
+  UserResponse? user;
   bool isLoading = true;
 
   @override
@@ -27,32 +28,26 @@ class _ViewProfilePageState extends State<ViewProfilePage> {
   /// Fetch user profile from backend
   Future<void> _fetchUserProfile() async {
     try {
-      final userId = await SessionManager().get("userId");
-      final url = Uri.parse("http://154.0.166.216:8091/api/lb/find-user-by-id/$userId");
+      final fetchedUser = await Service().getUserById();
 
-      final response = await http.get(url, headers: {
-        'Accept': 'application/json',
-      });
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body) as Map<String, dynamic>;
+      if (mounted) {
         setState(() {
-          userProfile = UserProfile.fromJson(data);
-          isLoading = false;
-        });
-      } else {
-        print("Failed to fetch profile: ${response.statusCode}");
-        setState(() {
+          user = fetchedUser;
           isLoading = false;
         });
       }
     } catch (e) {
-      print("Error fetching user profile: $e");
-      setState(() {
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          user = null; // mark as failed
+          isLoading = false;
+        });
+      }
     }
   }
+
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -62,7 +57,7 @@ class _ViewProfilePageState extends State<ViewProfilePage> {
       );
     }
 
-    if (userProfile == null) {
+    if (user == null && isLoading == false) {
       return Scaffold(
         body: Center(
           child: Column(
@@ -83,11 +78,11 @@ class _ViewProfilePageState extends State<ViewProfilePage> {
     // --- Calculate profile completion ---
     final totalFields = 5;
     final completedFields = [
-      userProfile!.grade,
-      userProfile!.province,
-      userProfile!.financialBackground,
-      userProfile!.subjects.isNotEmpty,
-      userProfile!.interests.isNotEmpty
+      user!.grade,
+      user!.province,
+      user!.financialBackground,
+      user!.subjects.isNotEmpty,
+      user!.interests.isNotEmpty
     ].where((e) => e != null && e != false).length;
 
     final completionPercentage = ((completedFields / totalFields) * 100).round();
@@ -110,21 +105,21 @@ class _ViewProfilePageState extends State<ViewProfilePage> {
             _buildProfileCard(completionPercentage),
             const SizedBox(height: 20),
             // Academic Info
-            _buildInfoCard("👤", "Current Grade", userProfile!.grade ?? "-", Colors.blue),
-            _buildInfoCard("📍", "Province", userProfile!.province ?? "-", Colors.green),
-            _buildInfoCard("💰", "Financial Background",
-                "${userProfile!.financialBackground ?? '-'} Income", Colors.purple),
+            _buildInfoCard("👤", "Current Grade", user!.grade ?? "-", Colors.blue),
+            _buildInfoCard("📍", "Province", user!.province ?? "-", Colors.green),
+            _buildInfoCard("💰", "Financial Status",
+                "${user!.financialBackground ?? '-'} Income", Colors.purple),
             const SizedBox(height: 20),
             // Subjects
-            _buildListCard("My Subjects", userProfile!.subjects, Colors.blue),
+            _buildListCard("My Subjects", user!.subjects, Colors.blue),
             const SizedBox(height: 20),
             // Interests
-            _buildListCard("Career Interests", userProfile!.interests, Colors.green),
+            _buildListCard("Career Interests", user!.interests, Colors.green),
             const SizedBox(height: 20),
             // Profile Strength
             _buildStrengthCard(
-              userProfile!.subjects.length,
-              userProfile!.interests.length,
+              user!.subjects.length,
+              user!.interests.length,
               completionPercentage,
             ),
           ],
@@ -159,9 +154,9 @@ class _ViewProfilePageState extends State<ViewProfilePage> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text("${userProfile!.grade ?? '-'} Learner",
+                  Text("${user!.grade ?? '-'} Learner",
                       style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  Text("📍 ${userProfile!.province ?? '-'}",
+                  Text("📍 ${user!.province ?? '-'}",
                       style: const TextStyle(fontSize: 14, color: Colors.black54)),
                 ],
               )

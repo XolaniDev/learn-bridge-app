@@ -29,10 +29,23 @@ enum FinancialBackground {
   high("High", "Strong financial resources");
 
   final String displayName;
-  final String description; // ✅ add this
+  final String description;
 
   const FinancialBackground(this.displayName, this.description);
+
+  static FinancialBackground? fromString(String name) {
+    try {
+      return FinancialBackground.values.firstWhere(
+            (e) => e.name.toLowerCase() == name.toLowerCase(),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
 }
+
+
 
 
 // ---------------- Enum Extensions ----------------

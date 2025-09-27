@@ -86,23 +86,16 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
         financialBackground: profile.financialBackground?.displayName ?? "",
       );
 
-
-
-
-
-
-
-
-
       setState(() => isLoading = false);
 
       if (response.success) {
+        final fetchedUser = await Service().getUserById();
         widget.onComplete(profile);
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (context) => dashboard_page.DashboardScreen(
-              userProfile: profile,
+              userProfile: fetchedUser,
               onCourseSelect: (course) {},
               onNavigate: (screen) {},
             ),

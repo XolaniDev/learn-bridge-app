@@ -1,17 +1,20 @@
 import 'dart:developer';
 import 'package:flutter/material.dart';
+import 'package:learn_bridge_v2/features/data/user_response.dart';
+import 'package:learn_bridge_v2/features/pages/profile_page/profile_page.dart';
 import '../../data/profile/user_profile.dart';
 import '../../utils/profile_setup_data.dart';
 import '../../widgets/profile_widgets/financial_background_tiles.dart';
 import '../../service/service.dart';
+import '../dashboard/dashboard_page.dart';
 
 class ProfileUpdatePage extends StatefulWidget {
-  final UserProfile userProfile;
+  final UserResponse user;
   final VoidCallback onBack;
 
   const ProfileUpdatePage({
     super.key,
-    required this.userProfile,
+    required this.user,
     required this.onBack,
   });
 
@@ -20,35 +23,88 @@ class ProfileUpdatePage extends StatefulWidget {
 }
 
 class _ProfileUpdatePageState extends State<ProfileUpdatePage> {
-  late UserProfile profile;
+  late UserResponse profile;
   bool isLoading = false;
 
+  String? _grade;
+  String? _province;
+  FinancialBackground? _finalBackground;
+  List<String> selectedSubjects = [];
+  List<String> selectedInterests = [];
+
+  final List<String> grades = [
+    "Grade 7",
+    "Grade 8",
+    "Grade 9",
+    "Grade 10",
+    "Grade 11",
+    "Grade 12",
+  ];
+
   final List<String> subjects = [
-    "Mathematics", "Physical Sciences", "Life Sciences", "English (Home Language)",
-    "Afrikaans", "History", "Geography", "Accounting", "Business Studies",
-    "Economics", "Life Orientation", "Computer Applications Technology",
-    "Information Technology", "Visual Arts", "Dramatic Arts", "Music",
-    "Consumer Studies", "Tourism", "Hospitality Studies"
+    "Mathematics",
+    "Physical Sciences",
+    "Life Sciences",
+    "English (Home Language)",
+    "Afrikaans",
+    "History",
+    "Geography",
+    "Accounting",
+    "Business Studies",
+    "Economics",
+    "Life Orientation",
+    "Computer Applications Technology",
+    "Information Technology",
+    "Visual Arts",
+    "Dramatic Arts",
+    "Music",
+    "Consumer Studies",
+    "Tourism",
+    "Hospitality Studies",
   ];
 
   final List<String> interests = [
-    "Technology", "Mathematics", "Sciences", "Arts & Design", "Business & Finance",
-    "Health & Medicine", "Engineering", "Law & Justice", "Education & Training",
-    "Media & Communication", "Sports & Fitness", "Environment & Nature", "Social Services",
-    "Languages & Literature"
+    "Technology",
+    "Mathematics",
+    "Sciences",
+    "Arts & Design",
+    "Business & Finance",
+    "Health & Medicine",
+    "Engineering",
+    "Law & Justice",
+    "Education & Training",
+    "Media & Communication",
+    "Sports & Fitness",
+    "Environment & Nature",
+    "Social Services",
+    "Languages & Literature",
   ];
 
   @override
   void initState() {
     super.initState();
-    profile = UserProfile(
-      id: widget.userProfile.id,
-      grade: widget.userProfile.grade,
-      province: widget.userProfile.province,
-      financialBackground: widget.userProfile.financialBackground,
-      subjects: List<String>.from(widget.userProfile.subjects),
-      interests: List<String>.from(widget.userProfile.interests),
+    profile = UserResponse(
+      id: widget.user.id,
+      grade: widget.user.grade,
+      province: widget.user.province,
+      financialBackground: widget.user.financialBackground,
+      subjects: List<String>.from(widget.user.subjects),
+      interests: List<String>.from(widget.user.interests),
+      name: '',
+      surname: '',
+      phoneNumber: '',
+      createdDate: '',
+      email: '',
+      roleFriendlyNames: [],
     );
+
+    _grade = profile.grade;
+    _province = profile.province;
+    _finalBackground = FinancialBackground.fromString(
+      profile.financialBackground,
+    );
+    selectedSubjects = List.from(profile.subjects);
+    selectedInterests = List.from(profile.interests);
   }
 
   Future<void> handleUpdate() async {
@@ -56,11 +112,11 @@ class _ProfileUpdatePageState extends State<ProfileUpdatePage> {
 
     try {
       final response = await Service().updateProfile(
-        grade: profile.grade ?? "",
-        province: profile.province ?? "",
-        interests: profile.interests,
-        subjects: profile.subjects,
-        financialBackground: profile.financialBackground?.displayName ?? "",
+        grade: _grade ?? "",
+        province: _province ?? "",
+        interests: selectedInterests,
+        subjects: selectedSubjects,
+        financialBackground: _finalBackground!.displayName,
       );
 
       setState(() => isLoading = false);
@@ -69,17 +125,28 @@ class _ProfileUpdatePageState extends State<ProfileUpdatePage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Profile updated successfully!")),
         );
-        widget.onBack();
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(response.message)),
+        final updatedProfile = await Service().getUserById();
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ProfilePage(
+              userProfile: updatedProfile,
+              onNavigate: (page) {},
+
+            ),
+          ),
         );
+
+      } else {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(response.message)));
       }
     } catch (e) {
       setState(() => isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error updating profile: $e")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Error updating profile: $e")));
     }
   }
 
@@ -99,36 +166,40 @@ class _ProfileUpdatePageState extends State<ProfileUpdatePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Grade
-              const Text("Grade", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              // --- Grade ---
+              const Text(
+                "Grade",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
               DropdownButton<String>(
-                value: profile.grade,
+                value: _grade,
                 hint: const Text("Select your grade"),
                 isExpanded: true,
-                onChanged: (value) => setState(() => profile.grade = value),
-                items: ["Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11"]
+                onChanged: (value) => setState(() => _grade = value),
+                items: grades
                     .map((g) => DropdownMenuItem(value: g, child: Text(g)))
                     .toList(),
               ),
               const SizedBox(height: 16),
 
-              // Subjects
-              const Text("You want to update your Subjects?", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              // --- Subjects ---
+              const Text(
+                "Select Subjects",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
                 children: subjects.map((subject) {
-                  final selected = profile.subjects.contains(subject);
+                  final selected = selectedSubjects.contains(subject);
                   return ChoiceChip(
                     label: Text(subject),
                     selected: selected,
                     onSelected: (sel) {
                       setState(() {
-                        if (sel) {
-                          profile.subjects.add(subject);
-                        } else {
-                          profile.subjects.remove(subject);
-                        }
+                        sel
+                            ? selectedSubjects.add(subject)
+                            : selectedSubjects.remove(subject);
                       });
                     },
                   );
@@ -136,23 +207,24 @@ class _ProfileUpdatePageState extends State<ProfileUpdatePage> {
               ),
               const SizedBox(height: 16),
 
-              // Interests
-              const Text("Please select your new Interests", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              // --- Interests ---
+              const Text(
+                "Select Interests",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
                 children: interests.map((interest) {
-                  final selected = profile.interests.contains(interest);
+                  final selected = selectedInterests.contains(interest);
                   return ChoiceChip(
                     label: Text(interest),
                     selected: selected,
                     onSelected: (sel) {
                       setState(() {
-                        if (sel) {
-                          profile.interests.add(interest);
-                        } else {
-                          profile.interests.remove(interest);
-                        }
+                        sel
+                            ? selectedInterests.add(interest)
+                            : selectedInterests.remove(interest);
                       });
                     },
                   );
@@ -160,28 +232,36 @@ class _ProfileUpdatePageState extends State<ProfileUpdatePage> {
               ),
               const SizedBox(height: 16),
 
-              // Financial Background
-              const Text("Tell us your current finance state", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              // --- Financial Background ---
+              const Text(
+                "Tell us your current finance state",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
               FinancialStep(
-                selectedBackground: profile.financialBackground,
-                onSelect: (fb) => setState(() => profile.financialBackground = fb),
+                selectedBackground: _finalBackground,
+                onSelect: (fb) => setState(() => _finalBackground = fb),
               ),
               const SizedBox(height: 16),
 
-              // Province
-              const Text("Province", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              // --- Province ---
+              const Text(
+                "Province",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
               DropdownButton<String>(
-                value: profile.province,
+                value: _province,
                 hint: const Text("Select your province"),
                 isExpanded: true,
-                onChanged: (value) => setState(() => profile.province = value),
-                items: provinces.map((p) => DropdownMenuItem(value: p, child: Text(p))).toList(),
+                onChanged: (value) => setState(() => _province = value),
+                items: provinces
+                    .map((p) => DropdownMenuItem(value: p, child: Text(p)))
+                    .toList(),
               ),
               const SizedBox(height: 32),
 
-              // Update button
+              // --- Update button ---
               ElevatedButton(
-                onPressed: isLoading ? null : handleUpdate,
+                onPressed: handleUpdate,
                 child: isLoading
                     ? const CircularProgressIndicator(color: Colors.white)
                     : const Text("Update Profile"),

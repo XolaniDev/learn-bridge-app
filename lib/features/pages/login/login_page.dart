@@ -1,16 +1,14 @@
-import 'dart:convert';
-import 'dart:developer';
-
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import '../../data/profile/user_profile.dart';
 import '../../service/service.dart';
 import '../dashboard/dashboard_page.dart' as dashboard_page;
 import '../profile_page/profile_setup_page.dart';
 import '../welcome_page/welcome_page.dart';
 
-// ---------------- Login Page ----------------
 class AuthScreen extends StatefulWidget {
   final VoidCallback onAuthComplete;
+
   const AuthScreen({super.key, required this.onAuthComplete});
 
   @override
@@ -20,6 +18,18 @@ class AuthScreen extends StatefulWidget {
 class _AuthScreenState extends State<AuthScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+
+  // Toast Helper
+  void showToast(String message, {bool isError = false}) {
+    Fluttertoast.showToast(
+      msg: message,
+      toastLength: Toast.LENGTH_SHORT,
+      gravity: ToastGravity.TOP,
+      backgroundColor: isError ? Colors.redAccent : Colors.green,
+      textColor: Colors.white,
+      fontSize: 16.0,
+    );
+  }
 
   // Login form
   final _loginFormKey = GlobalKey<FormState>();
@@ -32,12 +42,15 @@ class _AuthScreenState extends State<AuthScreen>
   final TextEditingController _signupSurnameController = TextEditingController();
   final TextEditingController _signupEmailController = TextEditingController();
   final TextEditingController _signupPhoneController = TextEditingController();
-  final TextEditingController _signupPasswordController = TextEditingController();
-  final TextEditingController _signupConfirmPasswordController = TextEditingController();
+  final TextEditingController _signupPasswordController =
+  TextEditingController();
+  final TextEditingController _signupConfirmPasswordController =
+  TextEditingController();
 
   bool _loginObscure = true;
   final bool _signupConfirmObscure = true;
 
+  // ---------------- Handle Signup ----------------
   Future<void> _handleSignup() async {
     if (_signupFormKey.currentState!.validate()) {
       final name = _signupNameController.text.trim();
@@ -46,7 +59,6 @@ class _AuthScreenState extends State<AuthScreen>
       final phone = _signupPhoneController.text.trim();
       final password = _signupPasswordController.text.trim();
 
-      // Call the backend service
       final response = await Service().signup(
         name: name,
         surname: surname,
@@ -55,11 +67,8 @@ class _AuthScreenState extends State<AuthScreen>
         password: password,
       );
 
-
       if (response.success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(response.message ?? "Signup successful!")),
-        );
+        showToast(response.message ?? "Signup successful!");
 
         _signupNameController.clear();
         _signupSurnameController.clear();
@@ -71,25 +80,50 @@ class _AuthScreenState extends State<AuthScreen>
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => ProfileSetupPage(
-              onComplete: (UserProfile profile) {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => WelcomePage(onContinue: () {  },),
-                  ),
-                );
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Profile setup completed!')),
-                );
-              },
-            ),
+            builder: (context) =>
+                ProfileSetupPage(
+                  onComplete: (UserProfile profile) {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => WelcomePage(onContinue: () {}),
+                      ),
+                    );
+                    showToast("Profile setup completed!");
+                  },
+                ),
           ),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(response.message ?? "Signup failed")),
+        showToast(response.message ?? "Signup failed", isError: true);
+      }
+    }
+  }
+
+  // ---------------- Handle Login ----------------
+  Future<void> _handleLogin() async {
+    if (_loginFormKey.currentState!.validate()) {
+      final username = _loginEmailController.text.trim();
+      final password = _loginPasswordController.text.trim();
+
+      try {
+        final profile = await Service().login(username, password);
+        showToast("Welcome back ${profile.name}!");
+
+        final fetchedUser = await Service().getUserById();
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) =>
+                dashboard_page.DashboardScreen(
+                  userProfile: fetchedUser,
+                  onNavigate: (screen) {},
+                  onCourseSelect: (course) {},
+                ),
+          ),
         );
+      } catch (e) {
+        showToast("Invalid username or password", isError: true);
       }
     }
   }
@@ -102,6 +136,8 @@ class _AuthScreenState extends State<AuthScreen>
     _signupPhoneController.dispose();
     _signupPasswordController.dispose();
     _signupConfirmPasswordController.dispose();
+    _loginEmailController.dispose();
+    _loginPasswordController.dispose();
     super.dispose();
   }
 
@@ -111,37 +147,33 @@ class _AuthScreenState extends State<AuthScreen>
     _tabController = TabController(length: 2, vsync: this);
   }
 
-  Future<void> _handleLogin() async {
-    if (_loginFormKey.currentState!.validate()) {
-      final username = _loginEmailController.text.trim();
-      final password = _loginPasswordController.text.trim();
-
-      try {
-        final profile = await Service().login(username, password);
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => dashboard_page.DashboardScreen(
-              userProfile: profile,
-              onNavigate: (screen) {},
-              onCourseSelect: (course) {},
-            ),
-          ),
-        );
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Welcome back ${profile.name}!')),
-        );
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Login failed: $e")),
-        );
-      }
-    }
+  // ---------------- Validators ----------------
+  String? _validateEmail(String? value) {
+    if (value == null || value.isEmpty) return 'Please enter your email';
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegex.hasMatch(value)) return 'Enter a valid email address';
+    return null;
   }
 
+  String? _validatePassword(String? value) {
+    if (value == null || value.isEmpty) return 'Please enter a password';
+    if (value.length < 6) return 'Password must be at least 6 characters';
+    if (!RegExp(r'[A-Z]').hasMatch(value)) {
+      return 'Password must contain an uppercase letter';
+    }
+    if (!RegExp(r'[0-9]').hasMatch(value)) {
+      return 'Password must contain a number';
+    }
+    return null;
+  }
 
+  String? _validateConfirmPassword(String? value) {
+    if (value == null || value.isEmpty) return 'Please confirm your password';
+    if (value != _signupPasswordController.text) {
+      return 'Passwords do not match';
+    }
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -170,26 +202,16 @@ class _AuthScreenState extends State<AuthScreen>
               const SizedBox(height: 24),
 
               // Tabs
-              // Wrap TabBar in a Container
               Container(
                 height: 50,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Colors.white,
-                      blurRadius: 4,
-                      offset: Offset(0, 2),
-                    )
-                  ],
                 ),
                 child: TabBar(
                   controller: _tabController,
-                  indicator: BoxDecoration(
-                    color: Colors.transparent, // remove default indicator
-                  ),
-                  labelColor: Colors.black, // text color for selected
-                  unselectedLabelColor: Colors.black, // text color for unselected
+                  indicator: BoxDecoration(color: Colors.transparent),
+                  labelColor: Colors.black,
+                  unselectedLabelColor: Colors.black,
                   tabs: List.generate(2, (index) {
                     bool isSelected = _tabController.index == index;
                     return Container(
@@ -198,19 +220,12 @@ class _AuthScreenState extends State<AuthScreen>
                         borderRadius: BorderRadius.circular(12),
                       ),
                       alignment: Alignment.center,
-                      child: Tab(
-                        text: index == 0 ? "Sign In" : "Sign Up",
-                      ),
+                      child: Tab(text: index == 0 ? "Sign In" : "Sign Up"),
                     );
                   }),
-                  onTap: (index) {
-                    setState(() {}); // refresh to swap colors
-                  },
+                  onTap: (_) => setState(() {}),
                 ),
               ),
-
-
-
               const SizedBox(height: 16),
 
               // Tab views
@@ -222,29 +237,28 @@ class _AuthScreenState extends State<AuthScreen>
                     SingleChildScrollView(
                       child: Form(
                         key: _loginFormKey,
+                        autovalidateMode: AutovalidateMode.onUserInteraction,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             const SizedBox(height: 8),
-                            // Email
                             TextFormField(
                               controller: _loginEmailController,
                               decoration: const InputDecoration(
                                 labelText: 'Email',
                                 prefixIcon: Icon(Icons.mail_outline),
                                 border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                                  borderRadius:
+                                  BorderRadius.all(Radius.circular(12)),
                                 ),
                                 filled: true,
                                 fillColor: Color(0xFFF0F0F0),
                               ),
                               keyboardType: TextInputType.emailAddress,
-                              validator: (value) =>
-                              value == null || value.isEmpty ? 'Please enter email' : null,
+                              validator: _validateEmail,
                             ),
                             const SizedBox(height: 16),
 
-                            // Password
                             TextFormField(
                               controller: _loginPasswordController,
                               obscureText: _loginObscure,
@@ -252,48 +266,42 @@ class _AuthScreenState extends State<AuthScreen>
                                 labelText: 'Password',
                                 prefixIcon: const Icon(Icons.lock_outline),
                                 border: const OutlineInputBorder(
-                                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                                  borderRadius:
+                                  BorderRadius.all(Radius.circular(12)),
                                 ),
                                 filled: true,
                                 fillColor: const Color(0xFFF0F0F0),
                                 suffixIcon: IconButton(
-                                  icon: Icon(
-                                    _loginObscure ? Icons.visibility_off : Icons.visibility,
-                                  ),
+                                  icon: Icon(_loginObscure
+                                      ? Icons.visibility_off
+                                      : Icons.visibility),
                                   onPressed: () {
-                                    setState(() => _loginObscure = !_loginObscure);
+                                    setState(
+                                            () =>
+                                        _loginObscure = !_loginObscure);
                                   },
                                 ),
                               ),
-                              validator: (value) =>
-                              value == null || value.isEmpty ? 'Please enter password' : null,
+                              validator: (v) =>
+                              v == null || v.isEmpty ? 'Enter password' : null,
                             ),
                             const SizedBox(height: 24),
 
-                            // Sign In button
                             ElevatedButton(
                               onPressed: _handleLogin,
-                              style: ButtonStyle(
-                                backgroundColor: MaterialStateProperty.all(Colors.blueAccent),
-                                foregroundColor: MaterialStateProperty.all(Colors.white),
-                                padding: MaterialStateProperty.all(
-                                    const EdgeInsets.symmetric(vertical: 16)),
-                                shape: MaterialStateProperty.all(
-                                  RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blueAccent,
+                                foregroundColor: Colors.white,
+                                padding:
+                                const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
                               child: const Text(
                                 'Sign In',
                                 style: TextStyle(fontSize: 18),
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'By continuing, you agree to our Terms of Service and Privacy Policy',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(fontSize: 12, color: Colors.grey),
                             ),
                           ],
                         ),
@@ -304,80 +312,85 @@ class _AuthScreenState extends State<AuthScreen>
                     SingleChildScrollView(
                       child: Form(
                         key: _signupFormKey,
+                        autovalidateMode: AutovalidateMode.onUserInteraction,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             const SizedBox(height: 8),
 
-                            // Name
                             TextFormField(
                               controller: _signupNameController,
                               decoration: const InputDecoration(
                                 labelText: 'Name',
                                 prefixIcon: Icon(Icons.person_outline),
                                 border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                                  borderRadius:
+                                  BorderRadius.all(Radius.circular(12)),
                                 ),
                                 filled: true,
                                 fillColor: Color(0xFFF0F0F0),
                               ),
-                              validator: (value) =>
-                              value == null || value.isEmpty ? 'Please enter your name' : null,
+                              validator: (v) =>
+                              v == null || v.isEmpty
+                                  ? 'Please enter your name'
+                                  : null,
                             ),
                             const SizedBox(height: 16),
 
-                            // Surname
                             TextFormField(
                               controller: _signupSurnameController,
                               decoration: const InputDecoration(
                                 labelText: 'Surname',
                                 prefixIcon: Icon(Icons.person),
                                 border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                                  borderRadius:
+                                  BorderRadius.all(Radius.circular(12)),
                                 ),
                                 filled: true,
                                 fillColor: Color(0xFFF0F0F0),
                               ),
-                              validator: (value) =>
-                              value == null || value.isEmpty ? 'Please enter your surname' : null,
+                              validator: (v) =>
+                              v == null || v.isEmpty
+                                  ? 'Please enter your surname'
+                                  : null,
                             ),
                             const SizedBox(height: 16),
 
-                            // Email
                             TextFormField(
                               controller: _signupEmailController,
                               decoration: const InputDecoration(
                                 labelText: 'Email',
                                 prefixIcon: Icon(Icons.mail_outline),
                                 border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                                  borderRadius:
+                                  BorderRadius.all(Radius.circular(12)),
                                 ),
                                 filled: true,
                                 fillColor: Color(0xFFF0F0F0),
                               ),
-                              validator: (value) =>
-                              value == null || value.isEmpty ? 'Please enter email' : null,
+                              validator: _validateEmail,
                             ),
                             const SizedBox(height: 16),
 
-                            // Phone
                             TextFormField(
                               controller: _signupPhoneController,
                               decoration: const InputDecoration(
                                 labelText: 'Phone Number',
                                 prefixIcon: Icon(Icons.phone),
                                 border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                                  borderRadius:
+                                  BorderRadius.all(Radius.circular(12)),
                                 ),
                                 filled: true,
                                 fillColor: Color(0xFFF0F0F0),
                               ),
-                              validator: (value) =>
-                              value == null || value.isEmpty ? 'Please enter phone' : null,
+                              validator: (v) =>
+                              v == null || v.isEmpty
+                                  ? 'Please enter your phone'
+                                  : null,
                             ),
                             const SizedBox(height: 16),
 
-                            // Password
                             TextFormField(
                               controller: _signupPasswordController,
                               obscureText: true,
@@ -385,17 +398,16 @@ class _AuthScreenState extends State<AuthScreen>
                                 labelText: 'Password',
                                 prefixIcon: Icon(Icons.lock_outline),
                                 border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                                  borderRadius:
+                                  BorderRadius.all(Radius.circular(12)),
                                 ),
                                 filled: true,
                                 fillColor: Color(0xFFF0F0F0),
                               ),
-                              validator: (value) =>
-                              value == null || value.isEmpty ? 'Please enter password' : null,
+                              validator: _validatePassword,
                             ),
                             const SizedBox(height: 16),
 
-                            // Confirm Password
                             TextFormField(
                               controller: _signupConfirmPasswordController,
                               obscureText: true,
@@ -403,29 +415,25 @@ class _AuthScreenState extends State<AuthScreen>
                                 labelText: 'Confirm Password',
                                 prefixIcon: Icon(Icons.lock_outline),
                                 border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                                  borderRadius:
+                                  BorderRadius.all(Radius.circular(12)),
                                 ),
                                 filled: true,
                                 fillColor: Color(0xFFF0F0F0),
                               ),
-                              validator: (value) => value != _signupPasswordController.text
-                                  ? 'Passwords do not match'
-                                  : null,
+                              validator: _validateConfirmPassword,
                             ),
                             const SizedBox(height: 24),
 
-                            // Sign Up button
                             ElevatedButton(
                               onPressed: _handleSignup,
-                              style: ButtonStyle(
-                                backgroundColor: MaterialStateProperty.all(Colors.blueAccent),
-                                foregroundColor: MaterialStateProperty.all(Colors.white),
-                                padding: MaterialStateProperty.all(
-                                    const EdgeInsets.symmetric(vertical: 16)),
-                                shape: MaterialStateProperty.all(
-                                  RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blueAccent,
+                                foregroundColor: Colors.white,
+                                padding:
+                                const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
                               child: const Text(
@@ -436,8 +444,7 @@ class _AuthScreenState extends State<AuthScreen>
                           ],
                         ),
                       ),
-                    )
-                    ,
+                    ),
                   ],
                 ),
               ),
