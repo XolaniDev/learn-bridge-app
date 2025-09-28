@@ -96,7 +96,6 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
           MaterialPageRoute(
             builder: (context) => dashboard_page.DashboardScreen(
               userProfile: fetchedUser,
-              onCourseSelect: (course) {},
               onNavigate: (screen) {},
             ),
           ),

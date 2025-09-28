@@ -5,6 +5,7 @@ import '../../service/service.dart';
 import '../dashboard/dashboard_page.dart' as dashboard_page;
 import '../profile_page/profile_setup_page.dart';
 import '../welcome_page/welcome_page.dart';
+import 'forgot_password.dart';
 
 class AuthScreen extends StatefulWidget {
   final VoidCallback onAuthComplete;
@@ -118,7 +119,6 @@ class _AuthScreenState extends State<AuthScreen>
                 dashboard_page.DashboardScreen(
                   userProfile: fetchedUser,
                   onNavigate: (screen) {},
-                  onCourseSelect: (course) {},
                 ),
           ),
         );
@@ -234,79 +234,92 @@ class _AuthScreenState extends State<AuthScreen>
                   controller: _tabController,
                   children: [
                     // ------------------ Login Form ------------------
-                    SingleChildScrollView(
-                      child: Form(
-                        key: _loginFormKey,
-                        autovalidateMode: AutovalidateMode.onUserInteraction,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            const SizedBox(height: 8),
-                            TextFormField(
-                              controller: _loginEmailController,
-                              decoration: const InputDecoration(
-                                labelText: 'Email',
-                                prefixIcon: Icon(Icons.mail_outline),
-                                border: OutlineInputBorder(
-                                  borderRadius:
-                                  BorderRadius.all(Radius.circular(12)),
-                                ),
-                                filled: true,
-                                fillColor: Color(0xFFF0F0F0),
-                              ),
-                              keyboardType: TextInputType.emailAddress,
-                              validator: _validateEmail,
-                            ),
-                            const SizedBox(height: 16),
+                // ------------------ Login Form ------------------
+                SingleChildScrollView(
+                child: Form(
+                key: _loginFormKey,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _loginEmailController,
+                        decoration: const InputDecoration(
+                          labelText: 'Email',
+                          prefixIcon: Icon(Icons.mail_outline),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(12)),
+                          ),
+                          filled: true,
+                          fillColor: Color(0xFFF0F0F0),
+                        ),
+                        keyboardType: TextInputType.emailAddress,
+                        validator: _validateEmail,
+                      ),
+                      const SizedBox(height: 16),
 
-                            TextFormField(
-                              controller: _loginPasswordController,
-                              obscureText: _loginObscure,
-                              decoration: InputDecoration(
-                                labelText: 'Password',
-                                prefixIcon: const Icon(Icons.lock_outline),
-                                border: const OutlineInputBorder(
-                                  borderRadius:
-                                  BorderRadius.all(Radius.circular(12)),
-                                ),
-                                filled: true,
-                                fillColor: const Color(0xFFF0F0F0),
-                                suffixIcon: IconButton(
-                                  icon: Icon(_loginObscure
-                                      ? Icons.visibility_off
-                                      : Icons.visibility),
-                                  onPressed: () {
-                                    setState(
-                                            () =>
-                                        _loginObscure = !_loginObscure);
-                                  },
-                                ),
-                              ),
-                              validator: (v) =>
-                              v == null || v.isEmpty ? 'Enter password' : null,
+                      TextFormField(
+                        controller: _loginPasswordController,
+                        obscureText: _loginObscure,
+                        decoration: InputDecoration(
+                          labelText: 'Password',
+                          prefixIcon: const Icon(Icons.lock_outline),
+                          border: const OutlineInputBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(12)),
+                          ),
+                          filled: true,
+                          fillColor: const Color(0xFFF0F0F0),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _loginObscure ? Icons.visibility_off : Icons.visibility,
                             ),
-                            const SizedBox(height: 24),
+                            onPressed: () {
+                              setState(() => _loginObscure = !_loginObscure);
+                            },
+                          ),
+                        ),
+                        validator: (v) =>
+                        v == null || v.isEmpty ? 'Enter password' : null,
+                      ),
+                      const SizedBox(height: 24),
 
-                            ElevatedButton(
-                              onPressed: _handleLogin,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blueAccent,
-                                foregroundColor: Colors.white,
-                                padding:
-                                const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              child: const Text(
-                                'Sign In',
-                                style: TextStyle(fontSize: 18),
-                              ),
-                            ),
-                          ],
+                      ElevatedButton(
+                        onPressed: _handleLogin,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blueAccent,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Sign In',
+                          style: TextStyle(fontSize: 18),
                         ),
                       ),
+
+                      // 👇 Forgot Password link added here
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const ForgotPasswordPage()),
+                      );
+                    },
+                    child: const Text(
+                      "Forgot Password?",
+                      style: TextStyle(
+                        color: Colors.blueAccent,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
+                  ),
+                    ],
+                  ),
+                ),
+              ),
 
                     // ------------------ Signup Form ------------------
                     SingleChildScrollView(

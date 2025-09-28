@@ -72,9 +72,6 @@ class _UpdateUserPageState extends State<UpdateUserPage> {
               onNavigate: (page) {
                 // handle navigation inside dashboard
               },
-              onCourseSelect: (course) {
-                // handle course selection
-              },
             ),
           ),
         );
