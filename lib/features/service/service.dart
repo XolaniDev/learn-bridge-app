@@ -8,6 +8,8 @@ import 'package:flutter_session_manager/flutter_session_manager.dart';
 import 'package:http/http.dart' as http;
 
 import '../data/dashboardResponse.dart';
+import '../data/funding_response.dart';
+import '../data/job_market_response.dart';
 import '../data/message_response.dart';
 import '../data/profile/user_profile.dart' as profile_data;
 import '../data/user_response.dart';
@@ -158,8 +160,55 @@ class Service {
         }
     }
 
+    Future<JobMarketResponse?> getJobMarketData() async {
+        try {
+            final userId = await SessionManager().get("userId");
+            final response = await dio.get(
+                '$lbBaseUrl/job-market/$userId',
+                options: Options(
+                    headers: {
+                        'accept': '*/*',
+                    },
+                ),
+            );
 
+            if (response.statusCode == 200) {
+                return JobMarketResponse.fromJson(response.data);
+            } else {
+                print(
+                    "Failed to fetch job market: ${response.statusCode} - ${response.data}");
+                return null;
+            }
+        } catch (e) {
+            print('Failed to fetch job market data: $e');
+            rethrow;
+        }
+    }
 
+    Future<FundingResponse?> getFundingData() async {
+        try {
+            final userId = await SessionManager().get("userId");
+            final response = await dio.get(
+                '$lbBaseUrl/funding/$userId',
+                options: Options(
+                    headers: {
+                        'accept': '*/*',
+                    },
+                ),
+            );
+
+            if (response.statusCode == 200) {
+                return FundingResponse.fromJson(response.data);
+            } else {
+                print(
+                    "Failed to fetch funding data: ${response.statusCode} - ${response.data}");
+                return null;
+            }
+        } catch (e) {
+            print('Failed to fetch funding data: $e');
+            rethrow;
+        }
+    }
 
     Future<MessageResponse> updateUser(
     {

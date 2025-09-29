@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../data/dashboardResponse.dart';
-import '../../data/course/course.dart'; // ✅ import your Course model
+import '../../data/course/course.dart';
 import '../../service/service.dart';
 import '../course_details/course_detail_page.dart';
+import '../funding/funding_page.dart';
 import '../job_market/job_market_page.dart';
 import '../profile_page/profile_page.dart';
 
@@ -317,7 +318,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
               widget.onNavigate('courses');
               break;
             case 1: // Funding
-              widget.onNavigate('funding');
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => FundingPage(onBack: () {  },
+                  ),
+                ),
+              );
               break;
             case 2: // Jobs
               Navigator.push(
@@ -346,7 +353,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.school, color: Colors.blue),
+            icon: Icon(Icons.school, color: Colors.grey),
             label: 'Courses',
           ),
           BottomNavigationBarItem(
