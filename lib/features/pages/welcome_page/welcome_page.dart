@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 class WelcomePage extends StatelessWidget {
   final VoidCallback onContinue;
 
-  const WelcomePage({super.key, required this.onContinue});
+  const WelcomePage({super.key, required this.onContinue, required Null Function() onBack});
 
   @override
   Widget build(BuildContext context) {
@@ -110,7 +110,7 @@ class WelcomePage extends StatelessWidget {
                   // Navigate to LoginPage when Get Started is pressed
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => AuthScreen(onAuthComplete: () {  },)),
+                    MaterialPageRoute(builder: (context) => AuthScreen(onAuthComplete: () {  }, onNavigate: (screen) {  },)),
                   );
                 },
                 style: ElevatedButton.styleFrom(

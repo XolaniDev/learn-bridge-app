@@ -3,6 +3,7 @@ import 'package:learn_bridge_v2/features/data/user_response.dart';
 import 'package:learn_bridge_v2/features/pages/profile_page/profile_view_page.dart';
 import 'package:learn_bridge_v2/features/pages/profile_page/update_profile.dart';
 import 'package:learn_bridge_v2/features/pages/profile_page/update_user.dart';
+import 'package:learn_bridge_v2/features/pages/welcome_page/welcome_page.dart';
 import '../../data/profile/user_profile.dart';
 import '../../service/service.dart';
 
@@ -229,6 +230,24 @@ class _ProfilePageState extends State<ProfilePage> {
                         }
                       },
                     ),
+                    _buildOptionCard(
+                      context,
+                      title: "Log Out",
+                      description: "",
+                      emoji: "📋",
+                      color: Colors.black54,
+                      onTap: () async {
+                        final updatedProfile =
+                        await Navigator.push<UserResponse>(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => WelcomePage(
+                              onBack: () {}, onContinue: () {  },
+                            ),
+                          ),
+                        );
+                      },
+                    )
                   ],
                 ),
               ),

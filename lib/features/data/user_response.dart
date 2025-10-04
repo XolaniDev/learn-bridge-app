@@ -12,6 +12,8 @@ class UserResponse {
   final List<String> subjects;
   final String financialBackground;
   final List<String> roleFriendlyNames;
+  final String learnerNumber;
+  final bool changePassword;
 
 
   UserResponse({
@@ -28,9 +30,10 @@ class UserResponse {
     required this.subjects,
     required this.financialBackground,
     required this.roleFriendlyNames,
+    required this.learnerNumber,
+    required this.changePassword,
   });
 
-  // Factory method to create a MessageResponse from JSON
   factory UserResponse.fromJson(Map<String, dynamic> json) {
     return UserResponse(
       id: json['id'],
@@ -45,6 +48,8 @@ class UserResponse {
       subjects: List<String>.from(json['subjects']),
       financialBackground: json['financialBackground'],
       roleFriendlyNames: List<String>.from(json['roleFriendlyNames']),
+      learnerNumber: json['learnerNumber'],
+      changePassword: json['changePassword'],
     );
   }
 }

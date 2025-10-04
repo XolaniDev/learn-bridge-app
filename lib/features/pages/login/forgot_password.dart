@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import '../../service/service.dart';  // ✅ import your Service
 import 'notification_screen.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
@@ -11,27 +12,40 @@ class ForgotPasswordPage extends StatefulWidget {
 
 class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   final _formKey = GlobalKey<FormState>();
+  final TextEditingController _learnerNoController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
+  bool _loading = false;
 
   @override
   void dispose() {
+    _learnerNoController.dispose();
     _emailController.dispose();
     super.dispose();
   }
 
   Future<void> _handleSubmit() async {
     if (_formKey.currentState?.validate() ?? false) {
+      final learnerNo = _learnerNoController.text.trim();
       final email = _emailController.text.trim();
 
-      // TODO: call your backend service to request reset email
-      Fluttertoast.showToast(msg: "Processing password reset for $email");
+      setState(() => _loading = true);
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => NotificationScreen(email: email),
-        ),
-      );
+      final success = await Service().forgotPassword(learnerNo, email);
+
+      setState(() => _loading = false);
+
+      if (success) {
+        Fluttertoast.showToast(msg: "Temporary password sent to $email");
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => NotificationScreen(email: email),
+          ),
+        );
+      } else {
+        Fluttertoast.showToast(msg: "Failed to reset password. Try again.");
+      }
     }
   }
 
@@ -51,12 +65,35 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Text(
-                "Enter your registered email address. "
-                    "We'll send you an authentication code to reset your password.",
+                "Enter your learner number and registered email address. "
+                    "We'll send you a temporary password to reset your account.",
                 style: TextStyle(fontSize: 14, color: Colors.black87),
               ),
               const SizedBox(height: 20),
 
+              // 🔹 Learner Number Field
+              TextFormField(
+                controller: _learnerNoController,
+                decoration: const InputDecoration(
+                  labelText: 'Learner Number',
+                  prefixIcon: Icon(Icons.badge_outlined),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                  ),
+                  filled: true,
+                  fillColor: Color(0xFFF0F0F0),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter your learner number';
+                  }
+                  return null;
+                },
+              ),
+
+              const SizedBox(height: 16),
+
+              // 🔹 Email Field
               TextFormField(
                 controller: _emailController,
                 decoration: const InputDecoration(
@@ -84,7 +121,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
               const SizedBox(height: 24),
 
               ElevatedButton(
-                onPressed: _handleSubmit,
+                onPressed: _loading ? null : _handleSubmit,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blueAccent,
                   foregroundColor: Colors.white,
@@ -93,10 +130,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: const Text(
-                  "Submit",
-                  style: TextStyle(fontSize: 18),
-                ),
+                child: _loading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text("Submit", style: TextStyle(fontSize: 18)),
               ),
             ],
           ),

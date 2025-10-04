@@ -1,30 +1,29 @@
-import '../../utils/profile_setup_data.dart';
-
 class UserProfile {
-  String id;
-  String name;
-  String surname;
-  String phoneNumber;
-  String email;
-  String? province;  // now single string
-  String? grade;     // changed from enum to string
+  String? id;
+  String? name;
+  String? surname;
+  String? phoneNumber;
+  String? email;
+  String? province;
+  String? grade;
   List<String> interests;
   List<String> subjects;
-  FinancialBackground? financialBackground;
+  String? financialBackground;
 
   UserProfile({
-    this.id = '',
-    this.name = '',
-    this.surname = '',
-    this.phoneNumber = '',
-    this.email = '',
-    required this.province,
+    this.id,
+    this.name,
+    this.surname,
+    this.phoneNumber,
+    this.email,
+    this.province,
     this.grade,
     this.interests = const [],
     this.subjects = const [],
     this.financialBackground,
   });
 
+  /// Converts JSON map to UserProfile object
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     return UserProfile(
       id: json['id'] ?? '',
@@ -33,19 +32,12 @@ class UserProfile {
       phoneNumber: json['phoneNumber'] ?? '',
       email: json['email'] ?? '',
       province: json['province'] is List && json['province'].isNotEmpty
-          ? json['province'][0] // take first if backend returns list
-          : null,
+          ? json['province'][0].toString()
+          : json['province']?.toString(),
       grade: json['grade']?.toString(),
       interests: List<String>.from(json['interests'] ?? []),
       subjects: List<String>.from(json['subjects'] ?? []),
-      financialBackground: json['financialBackground'] != null
-          ? FinancialBackground.values
-          .cast<FinancialBackground?>()
-          .firstWhere(
-            (fb) => fb?.displayName == json['financialBackground'],
-        orElse: () => null,
-      )
-          : null,
+      financialBackground: json['financialBackground']?.toString(),
     );
   }
 
@@ -60,7 +52,7 @@ class UserProfile {
       'grade': grade,
       'interests': interests,
       'subjects': subjects,
-      'financialBackground': financialBackground?.displayName,
+      'financialBackground': financialBackground, // 👈 string
     };
   }
 }

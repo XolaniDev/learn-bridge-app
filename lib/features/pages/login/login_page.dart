@@ -1,6 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_session_manager/flutter_session_manager.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:learn_bridge_v2/features/pages/login/reset_password.dart';
 import '../../data/profile/user_profile.dart';
+import '../../data/user_response.dart';
 import '../../service/service.dart';
 import '../dashboard/dashboard_page.dart' as dashboard_page;
 import '../profile_page/profile_setup_page.dart';
@@ -10,7 +15,7 @@ import 'forgot_password.dart';
 class AuthScreen extends StatefulWidget {
   final VoidCallback onAuthComplete;
 
-  const AuthScreen({super.key, required this.onAuthComplete});
+  const AuthScreen({super.key, required this.onAuthComplete, required Null Function(dynamic screen) onNavigate});
 
   @override
   State<AuthScreen> createState() => _AuthScreenState();
@@ -20,7 +25,6 @@ class _AuthScreenState extends State<AuthScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  // Toast Helper
   void showToast(String message, {bool isError = false}) {
     Fluttertoast.showToast(
       msg: message,
@@ -35,18 +39,20 @@ class _AuthScreenState extends State<AuthScreen>
   // Login form
   final _loginFormKey = GlobalKey<FormState>();
   final TextEditingController _loginEmailController = TextEditingController();
-  final TextEditingController _loginPasswordController = TextEditingController();
+  final TextEditingController _loginPasswordController =
+      TextEditingController();
 
   // Signup form
   final _signupFormKey = GlobalKey<FormState>();
   final TextEditingController _signupNameController = TextEditingController();
-  final TextEditingController _signupSurnameController = TextEditingController();
+  final TextEditingController _signupSurnameController =
+      TextEditingController();
   final TextEditingController _signupEmailController = TextEditingController();
   final TextEditingController _signupPhoneController = TextEditingController();
   final TextEditingController _signupPasswordController =
-  TextEditingController();
+      TextEditingController();
   final TextEditingController _signupConfirmPasswordController =
-  TextEditingController();
+      TextEditingController();
 
   bool _loginObscure = true;
   final bool _signupConfirmObscure = true;
@@ -81,18 +87,17 @@ class _AuthScreenState extends State<AuthScreen>
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) =>
-                ProfileSetupPage(
-                  onComplete: (UserProfile profile) {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => WelcomePage(onContinue: () {}),
-                      ),
-                    );
-                    showToast("Profile setup completed!");
-                  },
-                ),
+            builder: (context) => ProfileSetupPage(
+              onComplete: (UserProfile profile) {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => WelcomePage(onContinue: () {}, onBack: () {  },),
+                  ),
+                );
+                showToast("Profile setup completed!");
+              },
+            ),
           ),
         );
       } else {
@@ -103,30 +108,50 @@ class _AuthScreenState extends State<AuthScreen>
 
   // ---------------- Handle Login ----------------
   Future<void> _handleLogin() async {
-    if (_loginFormKey.currentState!.validate()) {
-      final username = _loginEmailController.text.trim();
-      final password = _loginPasswordController.text.trim();
+    if (!_loginFormKey.currentState!.validate()) return;
 
-      try {
-        final profile = await Service().login(username, password);
-        showToast("Welcome back ${profile.name}!");
+    final email = _loginEmailController.text.trim();
+    final password = _loginPasswordController.text.trim();
 
-        final fetchedUser = await Service().getUserById();
+    try {
+
+      UserResponse user = await Service().login(email, password);
+
+
+      final userJson = await SessionManager().get("userData");
+      if (userJson == null) {
+        showToast("Session error. Try again.", isError: true);
+        return;
+      }
+
+
+      if (user.changePassword) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) =>
-                dashboard_page.DashboardScreen(
-                  userProfile: fetchedUser,
-                  onNavigate: (screen) {},
-                ),
+            builder: (_) => ResetPasswordPage(),
           ),
         );
-      } catch (e) {
-        showToast("Invalid username or password", isError: true);
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => dashboard_page.DashboardScreen(
+              userProfile: user, // UserProfile object
+              onNavigate: (screen) {},
+            ),
+          ),
+        );
       }
+
+      showToast("Welcome back ${user.name}!");
+    } catch (e) {
+      showToast("Invalid email or password", isError: true);
+      print("Login error: $e");
     }
+
   }
+
 
   @override
   void dispose() {
@@ -234,92 +259,105 @@ class _AuthScreenState extends State<AuthScreen>
                   controller: _tabController,
                   children: [
                     // ------------------ Login Form ------------------
-                // ------------------ Login Form ------------------
-                SingleChildScrollView(
-                child: Form(
-                key: _loginFormKey,
-                  autovalidateMode: AutovalidateMode.onUserInteraction,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const SizedBox(height: 8),
-                      TextFormField(
-                        controller: _loginEmailController,
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
-                          prefixIcon: Icon(Icons.mail_outline),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(12)),
-                          ),
-                          filled: true,
-                          fillColor: Color(0xFFF0F0F0),
-                        ),
-                        keyboardType: TextInputType.emailAddress,
-                        validator: _validateEmail,
-                      ),
-                      const SizedBox(height: 16),
-
-                      TextFormField(
-                        controller: _loginPasswordController,
-                        obscureText: _loginObscure,
-                        decoration: InputDecoration(
-                          labelText: 'Password',
-                          prefixIcon: const Icon(Icons.lock_outline),
-                          border: const OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(12)),
-                          ),
-                          filled: true,
-                          fillColor: const Color(0xFFF0F0F0),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _loginObscure ? Icons.visibility_off : Icons.visibility,
+                    SingleChildScrollView(
+                      child: Form(
+                        key: _loginFormKey,
+                        autovalidateMode: AutovalidateMode.onUserInteraction,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const SizedBox(height: 8),
+                            TextFormField(
+                              controller: _loginEmailController,
+                              decoration: const InputDecoration(
+                                labelText: 'Email',
+                                prefixIcon: Icon(Icons.mail_outline),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.all(
+                                    Radius.circular(12),
+                                  ),
+                                ),
+                                filled: true,
+                                fillColor: Color(0xFFF0F0F0),
+                              ),
+                              keyboardType: TextInputType.emailAddress,
+                              validator: _validateEmail,
                             ),
-                            onPressed: () {
-                              setState(() => _loginObscure = !_loginObscure);
-                            },
-                          ),
-                        ),
-                        validator: (v) =>
-                        v == null || v.isEmpty ? 'Enter password' : null,
-                      ),
-                      const SizedBox(height: 24),
+                            const SizedBox(height: 16),
 
-                      ElevatedButton(
-                        onPressed: _handleLogin,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blueAccent,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: const Text(
-                          'Sign In',
-                          style: TextStyle(fontSize: 18),
-                        ),
-                      ),
+                            TextFormField(
+                              controller: _loginPasswordController,
+                              obscureText: _loginObscure,
+                              decoration: InputDecoration(
+                                labelText: 'Password',
+                                prefixIcon: const Icon(Icons.lock_outline),
+                                border: const OutlineInputBorder(
+                                  borderRadius: BorderRadius.all(
+                                    Radius.circular(12),
+                                  ),
+                                ),
+                                filled: true,
+                                fillColor: const Color(0xFFF0F0F0),
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    _loginObscure
+                                        ? Icons.visibility_off
+                                        : Icons.visibility,
+                                  ),
+                                  onPressed: () {
+                                    setState(
+                                      () => _loginObscure = !_loginObscure,
+                                    );
+                                  },
+                                ),
+                              ),
+                              validator: (v) => v == null || v.isEmpty
+                                  ? 'Enter password'
+                                  : null,
+                            ),
+                            const SizedBox(height: 24),
 
-                      // 👇 Forgot Password link added here
-                  TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const ForgotPasswordPage()),
-                      );
-                    },
-                    child: const Text(
-                      "Forgot Password?",
-                      style: TextStyle(
-                        color: Colors.blueAccent,
-                        fontWeight: FontWeight.w500,
+                            ElevatedButton(
+                              onPressed: _handleLogin,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blueAccent,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: const Text(
+                                'Sign In',
+                                style: TextStyle(fontSize: 18),
+                              ),
+                            ),
+
+                            // 👇 Forgot Password link added here
+                            TextButton(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const ForgotPasswordPage(),
+                                  ),
+                                );
+                              },
+                              child: const Text(
+                                "Forgot Password?",
+                                style: TextStyle(
+                                  color: Colors.blueAccent,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                    ],
-                  ),
-                ),
-              ),
 
                     // ------------------ Signup Form ------------------
                     SingleChildScrollView(
@@ -337,14 +375,14 @@ class _AuthScreenState extends State<AuthScreen>
                                 labelText: 'Name',
                                 prefixIcon: Icon(Icons.person_outline),
                                 border: OutlineInputBorder(
-                                  borderRadius:
-                                  BorderRadius.all(Radius.circular(12)),
+                                  borderRadius: BorderRadius.all(
+                                    Radius.circular(12),
+                                  ),
                                 ),
                                 filled: true,
                                 fillColor: Color(0xFFF0F0F0),
                               ),
-                              validator: (v) =>
-                              v == null || v.isEmpty
+                              validator: (v) => v == null || v.isEmpty
                                   ? 'Please enter your name'
                                   : null,
                             ),
@@ -356,14 +394,14 @@ class _AuthScreenState extends State<AuthScreen>
                                 labelText: 'Surname',
                                 prefixIcon: Icon(Icons.person),
                                 border: OutlineInputBorder(
-                                  borderRadius:
-                                  BorderRadius.all(Radius.circular(12)),
+                                  borderRadius: BorderRadius.all(
+                                    Radius.circular(12),
+                                  ),
                                 ),
                                 filled: true,
                                 fillColor: Color(0xFFF0F0F0),
                               ),
-                              validator: (v) =>
-                              v == null || v.isEmpty
+                              validator: (v) => v == null || v.isEmpty
                                   ? 'Please enter your surname'
                                   : null,
                             ),
@@ -375,8 +413,9 @@ class _AuthScreenState extends State<AuthScreen>
                                 labelText: 'Email',
                                 prefixIcon: Icon(Icons.mail_outline),
                                 border: OutlineInputBorder(
-                                  borderRadius:
-                                  BorderRadius.all(Radius.circular(12)),
+                                  borderRadius: BorderRadius.all(
+                                    Radius.circular(12),
+                                  ),
                                 ),
                                 filled: true,
                                 fillColor: Color(0xFFF0F0F0),
@@ -391,14 +430,14 @@ class _AuthScreenState extends State<AuthScreen>
                                 labelText: 'Phone Number',
                                 prefixIcon: Icon(Icons.phone),
                                 border: OutlineInputBorder(
-                                  borderRadius:
-                                  BorderRadius.all(Radius.circular(12)),
+                                  borderRadius: BorderRadius.all(
+                                    Radius.circular(12),
+                                  ),
                                 ),
                                 filled: true,
                                 fillColor: Color(0xFFF0F0F0),
                               ),
-                              validator: (v) =>
-                              v == null || v.isEmpty
+                              validator: (v) => v == null || v.isEmpty
                                   ? 'Please enter your phone'
                                   : null,
                             ),
@@ -411,8 +450,9 @@ class _AuthScreenState extends State<AuthScreen>
                                 labelText: 'Password',
                                 prefixIcon: Icon(Icons.lock_outline),
                                 border: OutlineInputBorder(
-                                  borderRadius:
-                                  BorderRadius.all(Radius.circular(12)),
+                                  borderRadius: BorderRadius.all(
+                                    Radius.circular(12),
+                                  ),
                                 ),
                                 filled: true,
                                 fillColor: Color(0xFFF0F0F0),
@@ -428,8 +468,9 @@ class _AuthScreenState extends State<AuthScreen>
                                 labelText: 'Confirm Password',
                                 prefixIcon: Icon(Icons.lock_outline),
                                 border: OutlineInputBorder(
-                                  borderRadius:
-                                  BorderRadius.all(Radius.circular(12)),
+                                  borderRadius: BorderRadius.all(
+                                    Radius.circular(12),
+                                  ),
                                 ),
                                 filled: true,
                                 fillColor: Color(0xFFF0F0F0),
@@ -443,8 +484,9 @@ class _AuthScreenState extends State<AuthScreen>
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.blueAccent,
                                 foregroundColor: Colors.white,
-                                padding:
-                                const EdgeInsets.symmetric(vertical: 16),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),

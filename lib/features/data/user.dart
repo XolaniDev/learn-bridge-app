@@ -8,6 +8,7 @@ class User {
   final List<String> roles;
   final List<String> roleFriendlyNames;
 
+
   User({
     required this.id,
     required this.name,
@@ -17,6 +18,7 @@ class User {
     required this.email,
     required this.roles,
     required this.roleFriendlyNames,
+
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -29,6 +31,7 @@ class User {
       email: json['email'],
       roles: List<String>.from(json['roles']),
       roleFriendlyNames: List<String>.from(json['roleFriendlyNames']),
+
     );
   }
 

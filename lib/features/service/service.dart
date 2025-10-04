@@ -82,7 +82,7 @@ class Service {
         }
     }
 
-    Future<profile_data.UserProfile> login(String email, String password) async {
+    Future<UserResponse> login(String email, String password) async {
         try {
             final response = await dio.post(
                 '$authBaseUrl/signin',
@@ -98,14 +98,44 @@ class Service {
                 ),
             );
 
-            final profile = profile_data.UserProfile.fromJson(response.data);
-            await SessionManager().set("userId", UserResponse.fromJson(response.data).id);
+            final profile = UserResponse.fromJson(response.data);
             await SessionManager().set("userData", jsonEncode(response.data));
+            await SessionManager().set("userId", UserResponse.fromJson(response.data).id);
 
             return profile;
         } catch (e) {
             print('Login failed: $e');
             rethrow;
+        }
+    }
+
+
+    Future<bool> forgotPassword(String learnerNumber, String email) async {
+        try {
+            final response = await dio.post(
+                "$authBaseUrl/forgot-password",
+                data: {
+                    "learnerNumber": learnerNumber,
+                    "email": email,
+                },
+                options: Options(headers: {
+                    "Content-Type": "application/json",
+                    "accept": "*/*",
+                }),
+            );
+
+            print("ForgotPassword raw response: ${response.data}");
+
+            final statusCodeValue = response.data["statusCodeValue"];
+            final success = response.data["body"]?["success"];
+
+            if (statusCodeValue == 200 && success == true) {
+                return true;
+            }
+            return false;
+        } catch (e) {
+            print("ForgotPassword error: $e");
+            return false;
         }
     }
 
@@ -273,10 +303,11 @@ class Service {
 
 
     Future<MessageResponse> updateLoginDetails({
-        required String userId,
         required String currentPassword,
         required String newPassword,
     }) async {
+
+        final userId = await SessionManager().get("userId");
         final Map<String, dynamic> requestBody = {
             "userId": userId,
             "currentPassword": currentPassword,
@@ -332,40 +363,47 @@ class Service {
         required List<String> subjects,
         required String financialBackground,
     }) async {
-        final url = Uri.parse('$authBaseUrl/profile-setup');
 
-        final userId = await SessionManager().get("userId");
-        final Map<String, dynamic> requestBody = {
-            "userId": userId,
-            "province": province,
-            "grade": grade,
-            "interests": interests,
-            "subjects": subjects,
-            "financialBackground": financialBackground,
-        };
+            final userId = await SessionManager().get("userId");
 
-        try {
-            final response = await http.post(
-                url,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'accept': '*/*',
-                },
-                body: jsonEncode(requestBody),
-            );
+            final Map<String, dynamic> requestBody = {
+                "userId": userId,
+                "province": province,
+                "grade": grade ?? "",
+                "interests": interests,
+                "subjects": subjects,
+                "financialBackground": financialBackground,
+            };
 
+            final url = Uri.parse('$authBaseUrl/profile-setup');
 
-            if (response.statusCode == 200 || response.statusCode == 400) {
-                final responseData = jsonDecode(response.body);
-                return MessageResponse.fromJson(responseData);
-            } else {
+            try {
+                final response = await http.post(
+                    url,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'accept': '*/*',
+                    },
+                    body: jsonEncode(requestBody),
+                );
+
+                if (response.statusCode == 200) {
+                    final responseData = jsonDecode(response.body);
+                    // return MessageResponse.fromJson(responseData);
+                    await SessionManager().set("userId", SignupResponse.fromJson(responseData).userId);
+                    // await SessionManager().set("userId", UserResponse.fromJson(response.body as Map<String, dynamic>).id);
+
+                    return MessageResponse(
+                        success: true, message: "Profile set up successfully");
+                }
+                else {
+                    return MessageResponse(
+                        success: false, message: "An unknown error occurred.");
+                }
+            } catch (e) {
                 return MessageResponse(
-                    success: false, message: "An unknown error occurred.");
+                    success: false, message: "Error set up profile $e");
             }
-        } catch (e) {
-            return MessageResponse(
-                success: false, message: "Error during signup: $e");
-        }
     }
 
     Future<MessageResponse> updateProfile({

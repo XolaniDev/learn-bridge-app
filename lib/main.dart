@@ -16,7 +16,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'LearnBridge',
       theme: ThemeData(primarySwatch: Colors.blue),
-      home: WelcomePage(onContinue: () {}),
+      home: WelcomePage(onContinue: () {}, onBack: () {  },),
       routes: {},
     );
   }

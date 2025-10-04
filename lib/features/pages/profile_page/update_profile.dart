@@ -95,7 +95,7 @@ class _ProfileUpdatePageState extends State<ProfileUpdatePage> {
       phoneNumber: '',
       createdDate: '',
       email: '',
-      roleFriendlyNames: [],
+      roleFriendlyNames: [], learnerNumber: '', changePassword: false,
     );
 
     _grade = profile.grade;
