@@ -42,43 +42,21 @@ class _ProfileUpdatePageState extends State<ProfileUpdatePage> {
   ];
 
   final List<String> subjects = [
-    "Mathematics",
-    "Physical Sciences",
-    "Life Sciences",
-    "English (Home Language)",
-    "Afrikaans",
-    "History",
-    "Geography",
-    "Accounting",
-    "Business Studies",
-    "Economics",
-    "Life Orientation",
-    "Computer Applications Technology",
-    "Information Technology",
-    "Visual Arts",
-    "Dramatic Arts",
-    "Music",
-    "Consumer Studies",
-    "Tourism",
-    "Hospitality Studies",
+    "Mathematics", "Mathematical Literacy", "Physical Sciences", "Life Sciences", "Agricultural Sciences",
+    "Accounting", "Business Studies", "Economics", "Geography", "History", "English Home Language", "English First Additional Language",
+    "Afrikaans First Additional Language", "isiZulu First Additional Language", "isiXhosa First Additional Language", "Sesotho", "Life Orientation", "Information Technology (IT)",
+    "Computer Applications Technology (CAT)", "Engineering Graphics and Design (EGD)", "Tourism", "Hospitality Studies",
+    "Consumer Studies", "Visual Arts", "Dramatic Arts", "Music"
   ];
 
   final List<String> interests = [
-    "Technology",
-    "Mathematics",
-    "Sciences",
-    "Arts & Design",
-    "Business & Finance",
-    "Health & Medicine",
-    "Engineering",
-    "Law & Justice",
-    "Education & Training",
-    "Media & Communication",
-    "Sports & Fitness",
-    "Environment & Nature",
-    "Social Services",
-    "Languages & Literature",
+    "Technology", "Science & Research", "Sciences", "Mathematics", "Business & Entrepreneurship",
+    "Business & Finance", "Finance & Accounting", "Arts & Design", "Sports & Fitness", "Law & Justice",
+    "Law & Politics", "Medicine & Health", "Health & Medicine", "Social Work & Community Development", "Social Services",
+    "Engineering", "Engineering & Innovation", "Education & Training", "Teaching & Education", "Media & Communication",
+    "Agriculture & Environment", "Environment & Nature", "Travel & Tourism", "Languages & Literature"
   ];
+
 
   @override
   void initState() {
@@ -129,14 +107,14 @@ class _ProfileUpdatePageState extends State<ProfileUpdatePage> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => ProfilePage(
+            builder: (context) => DashboardScreen(
               userProfile: updatedProfile,
-              onNavigate: (page) {},
-
+              onNavigate: (page) {
+                // handle navigation inside dashboard
+              },
             ),
           ),
         );
-
       } else {
         ScaffoldMessenger.of(
           context,

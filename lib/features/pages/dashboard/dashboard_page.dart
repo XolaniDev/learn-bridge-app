@@ -114,7 +114,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment:
-                                    CrossAxisAlignment.start,
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         course.name,
@@ -140,14 +140,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                               .take(2)
                                               .map(
                                                 (s) => Chip(
-                                              label: Text(
-                                                s,
-                                                style: const TextStyle(
-                                                  fontSize: 10,
+                                                  label: Text(
+                                                    s,
+                                                    style: const TextStyle(
+                                                      fontSize: 10,
+                                                    ),
+                                                  ),
                                                 ),
                                               ),
-                                            ),
-                                          ),
                                           if (course.requiredSubjects.length >
                                               2)
                                             Chip(
@@ -170,8 +170,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       id: course.id,
                                       name: course.name,
                                       description: course.description,
-                                      requiredSubjects:
-                                      List<String>.from(course.requiredSubjects),
+                                      requiredSubjects: List<String>.from(
+                                        course.requiredSubjects,
+                                      ),
                                       university: course.university,
                                       duration: course.duration,
                                       qualification: course.qualification,
@@ -180,8 +181,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (context) =>
-                                            CourseDetailsPage(course: mappedCourse),
+                                        builder: (context) => CourseDetailsPage(
+                                          course: mappedCourse,
+                                        ),
                                       ),
                                     );
                                   },
@@ -210,37 +212,55 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           child: Padding(
                             padding: const EdgeInsets.all(12.0),
                             child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      job.title,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
+                                // Left side: Job title and salary
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        job.title,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                        // prevent text from overflowing
+                                        maxLines: 1, // limit title to one line
                                       ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      job.salary,
-                                      style: TextStyle(color: Colors.grey[700]),
-                                    ),
-                                  ],
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        job.salary,
+                                        style: TextStyle(
+                                          color: Colors.grey[700],
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                      ),
+                                    ],
+                                  ),
                                 ),
+
+                                const SizedBox(width: 8),
+
+                                // Right side: Demand badge
                                 Container(
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 8,
                                     vertical: 4,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: getDemandColor(job.demand)
-                                        .withOpacity(0.3),
+                                    color: getDemandColor(
+                                      job.demand,
+                                    ).withOpacity(0.3),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(
                                     job.demand,
                                     style: const TextStyle(fontSize: 12),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                               ],
@@ -266,7 +286,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment:
-                                    CrossAxisAlignment.start,
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         fund.name,
@@ -279,7 +299,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       const SizedBox(height: 4),
                                       Text(
                                         fund.type,
-                                        style: TextStyle(color: Colors.grey[700]),
+                                        style: TextStyle(
+                                          color: Colors.grey[700],
+                                        ),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                       ),
@@ -321,8 +343,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => FundingPage(onBack: () {  },
-                  ),
+                  builder: (context) => FundingPage(onBack: () {}),
                 ),
               );
               break;
@@ -386,10 +407,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const SizedBox(height: 8),
             Text(
               value.toString(),
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             Text(title, style: const TextStyle(fontSize: 12)),
           ],
@@ -416,10 +434,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             if (subtitle != null)
               Text(
                 subtitle,
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Colors.blue,
-                ),
+                style: const TextStyle(fontSize: 14, color: Colors.blue),
               ),
           ],
         ),
