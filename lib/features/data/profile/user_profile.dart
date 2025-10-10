@@ -18,10 +18,11 @@ class UserProfile {
     this.email,
     this.province,
     this.grade,
-    this.interests = const [],
-    this.subjects = const [],
+    List<String>? interests,   // <-- optional parameter
+    List<String>? subjects,    // <-- optional parameter
     this.financialBackground,
-  });
+  })  : interests = interests ?? [],  // <-- non-const empty list
+        subjects = subjects ?? [];    // <-- non-const empty list
 
   /// Converts JSON map to UserProfile object
   factory UserProfile.fromJson(Map<String, dynamic> json) {
@@ -52,7 +53,7 @@ class UserProfile {
       'grade': grade,
       'interests': interests,
       'subjects': subjects,
-      'financialBackground': financialBackground, // 👈 string
+      'financialBackground': financialBackground,
     };
   }
 }
